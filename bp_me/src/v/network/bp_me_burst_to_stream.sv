@@ -97,11 +97,13 @@ module bp_me_burst_to_stream
      stream_pump_out
       (.clk_i(clk_i)
        ,.reset_i(reset_i)
+
        ,.msg_header_o(out_msg_header_o)
        ,.msg_data_o(out_msg_data_o)
        ,.msg_v_o(out_msg_v_o)
        ,.msg_last_o(out_msg_last_o)
        ,.msg_ready_and_i(out_msg_ready_and_i)
+
        ,.fsm_base_header_i(msg_header_li)
        ,.fsm_data_i(in_msg_data_i)
        ,.fsm_v_i(fsm_v_li)

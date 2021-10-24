@@ -84,7 +84,6 @@ module bp_me_stream_to_burst
   assign out_msg_header_v_o = in_msg_v_i & ~streaming_r;
   assign out_msg_has_data_o = has_data;
 
-  // data passthrough
   assign out_msg_data_o = in_msg_data_i;
   assign out_msg_data_v_o = in_msg_v_i & streaming_r;
   assign out_msg_last_o = in_msg_last_i;
