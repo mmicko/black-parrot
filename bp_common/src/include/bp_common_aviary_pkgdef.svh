@@ -895,6 +895,79 @@
                         ,bp_multicore_16_cfg_p
                         );
 
+  // hybrid CCE configs
+  localparam bp_proc_param_s bp_multicore_1_cce_hybrid_override_p =
+    '{cce_type: e_cce_hybrid
+      ,default : "inv"
+      };
+  `bp_aviary_derive_cfg(bp_multicore_1_cce_hybrid_cfg_p
+                        ,bp_multicore_1_cce_hybrid_override_p
+                        ,bp_multicore_1_cfg_p
+                        );
+
+  localparam bp_proc_param_s bp_multicore_2_cce_hybrid_override_p =
+    '{cce_type: e_cce_hybrid
+      ,default : "inv"
+      };
+  `bp_aviary_derive_cfg(bp_multicore_2_cce_hybrid_cfg_p
+                        ,bp_multicore_2_cce_hybrid_override_p
+                        ,bp_multicore_2_cfg_p
+                        );
+
+  localparam bp_proc_param_s bp_multicore_3_cce_hybrid_override_p =
+    '{cce_type: e_cce_hybrid
+      ,default : "inv"
+      };
+  `bp_aviary_derive_cfg(bp_multicore_3_cce_hybrid_cfg_p
+                        ,bp_multicore_3_cce_hybrid_override_p
+                        ,bp_multicore_3_cfg_p
+                        );
+
+  localparam bp_proc_param_s bp_multicore_4_cce_hybrid_override_p =
+    '{cce_type: e_cce_hybrid
+      ,default : "inv"
+      };
+  `bp_aviary_derive_cfg(bp_multicore_4_cce_hybrid_cfg_p
+                        ,bp_multicore_4_cce_hybrid_override_p
+                        ,bp_multicore_4_cfg_p
+                        );
+
+  localparam bp_proc_param_s bp_multicore_6_cce_hybrid_override_p =
+    '{cce_type: e_cce_hybrid
+      ,default : "inv"
+      };
+  `bp_aviary_derive_cfg(bp_multicore_6_cce_hybrid_cfg_p
+                        ,bp_multicore_6_cce_hybrid_override_p
+                        ,bp_multicore_6_cfg_p
+                        );
+
+  localparam bp_proc_param_s bp_multicore_8_cce_hybrid_override_p =
+    '{cce_type: e_cce_hybrid
+      ,default : "inv"
+      };
+  `bp_aviary_derive_cfg(bp_multicore_8_cce_hybrid_cfg_p
+                        ,bp_multicore_8_cce_hybrid_override_p
+                        ,bp_multicore_8_cfg_p
+                        );
+
+  localparam bp_proc_param_s bp_multicore_12_cce_hybrid_override_p =
+    '{cce_type: e_cce_hybrid
+      ,default : "inv"
+      };
+  `bp_aviary_derive_cfg(bp_multicore_12_cce_hybrid_cfg_p
+                        ,bp_multicore_12_cce_hybrid_override_p
+                        ,bp_multicore_12_cfg_p
+                        );
+
+  localparam bp_proc_param_s bp_multicore_16_cce_hybrid_override_p =
+    '{cce_type: e_cce_hybrid
+      ,default : "inv"
+      };
+  `bp_aviary_derive_cfg(bp_multicore_16_cce_hybrid_cfg_p
+                        ,bp_multicore_16_cce_hybrid_override_p
+                        ,bp_multicore_16_cfg_p
+                        );
+
   // Half core configs
   localparam bp_proc_param_s bp_test_unicore_half_override_p =
     '{num_lce  : 1
@@ -985,6 +1058,49 @@
   `bp_aviary_derive_cfg(bp_test_multicore_8x1_cce_ucode_cfg_p
                         ,bp_test_multicore_8x1_cce_ucode_override_p
                         ,bp_test_multicore_half_cce_ucode_cfg_p
+                        );
+
+  localparam bp_proc_param_s bp_test_multicore_half_cce_hybrid_override_p =
+    '{num_lce  : 1
+      ,cce_type : e_cce_hybrid
+      ,default : "inv"
+      };
+  `bp_aviary_derive_cfg(bp_test_multicore_half_cce_hybrid_cfg_p
+                        ,bp_test_multicore_half_cce_hybrid_override_p
+                        ,bp_test_multicore_half_cce_ucode_cfg_p
+                        );
+
+  localparam bp_proc_param_s bp_test_multicore_2x1_cce_hybrid_override_p =
+    '{num_lce  : 2
+      ,cce_type : e_cce_hybrid
+      ,default : "inv"
+      };
+  `bp_aviary_derive_cfg(bp_test_multicore_2x1_cce_hybrid_cfg_p
+                        ,bp_test_multicore_2x1_cce_hybrid_override_p
+                        ,bp_test_multicore_half_cce_hybrid_cfg_p
+                        );
+
+  localparam bp_proc_param_s bp_test_multicore_4x1_cce_hybrid_override_p =
+    '{num_lce  : 4
+      ,cc_x_dim : 2
+      ,cce_type : e_cce_hybrid
+      ,default : "inv"
+      };
+  `bp_aviary_derive_cfg(bp_test_multicore_4x1_cce_hybrid_cfg_p
+                        ,bp_test_multicore_4x1_cce_hybrid_override_p
+                        ,bp_test_multicore_half_cce_hybrid_cfg_p
+                        );
+
+  localparam bp_proc_param_s bp_test_multicore_8x1_cce_hybrid_override_p =
+    '{num_lce  : 8
+      ,cc_x_dim : 2
+      ,cc_y_dim : 2
+      ,cce_type : e_cce_hybrid
+      ,default : "inv"
+      };
+  `bp_aviary_derive_cfg(bp_test_multicore_8x1_cce_hybrid_cfg_p
+                        ,bp_test_multicore_8x1_cce_hybrid_override_p
+                        ,bp_test_multicore_half_cce_hybrid_cfg_p
                         );
 
   `ifndef BP_CUSTOM_BASE_CFG
@@ -1085,8 +1201,22 @@
   /* verilator lint_off WIDTH */
   parameter bp_proc_param_s [max_cfgs-1:0] all_cfgs_gp =
   {
+    // Hybrid CCE configs
+    bp_multicore_16_cce_hybrid_cfg_p
+    ,bp_multicore_12_cce_hybrid_cfg_p
+    ,bp_multicore_8_cce_hybrid_cfg_p
+    ,bp_multicore_6_cce_hybrid_cfg_p
+    ,bp_multicore_4_cce_hybrid_cfg_p
+    ,bp_multicore_3_cce_hybrid_cfg_p
+    ,bp_multicore_2_cce_hybrid_cfg_p
+    ,bp_multicore_1_cce_hybrid_cfg_p
+
     // Various testing configs
-    bp_test_multicore_8x1_cce_ucode_cfg_p
+    ,bp_test_multicore_8x1_cce_hybrid_cfg_p
+    ,bp_test_multicore_4x1_cce_hybrid_cfg_p
+    ,bp_test_multicore_2x1_cce_hybrid_cfg_p
+    ,bp_test_multicore_half_cce_hybrid_cfg_p
+    ,bp_test_multicore_8x1_cce_ucode_cfg_p
     ,bp_test_multicore_8x1_cfg_p
     ,bp_test_multicore_4x1_cce_ucode_cfg_p
     ,bp_test_multicore_4x1_cfg_p
@@ -1161,14 +1291,28 @@
   // This enum MUST be kept up to date with the parameter array above
   typedef enum bit [lg_max_cfgs-1:0]
   {
+    // Hybrid CCE configurations
+    e_bp_multicore_16_cce_hybrid_cfg                = 67
+    ,e_bp_multicore_12_cce_hybrid_cfg               = 66
+    ,e_bp_multicore_8_cce_hybrid_cfg                = 65
+    ,e_bp_multicore_6_cce_hybrid_cfg                = 64
+    ,e_bp_multicore_4_cce_hybrid_cfg                = 63
+    ,e_bp_multicore_3_cce_hybrid_cfg                = 62
+    ,e_bp_multicore_2_cce_hybrid_cfg                = 61
+    ,e_bp_multicore_1_cce_hybrid_cfg                = 60
+
     // Various testing config
-    e_bp_test_multicore_8x1_cce_ucode_cfg           = 55
-    ,e_bp_test_multicore_8x1_cfg                    = 54
-    ,e_bp_test_multicore_4x1_cce_ucode_cfg          = 53
-    ,e_bp_test_multicore_4x1_cfg                    = 52
-    ,e_bp_test_multicore_2x1_cce_ucode_cfg          = 51
-    ,e_bp_test_multicore_2x1_cfg                    = 50
-    ,e_bp_test_multicore_half_cce_ucode_cfg         = 49
+    ,e_bp_test_multicore_8x1_cce_hybrid_cfg         = 69
+    ,e_bp_test_multicore_4x1_cce_hybrid_cfg         = 58
+    ,e_bp_test_multicore_2x1_cce_hybrid_cfg         = 57
+    ,e_bp_test_multicore_half_cce_hybrid_cfg        = 56
+    ,e_bp_test_multicore_8x1_cce_ucode_cfg          = 55
+    ,e_bp_test_multicore_4x1_cce_ucode_cfg          = 54
+    ,e_bp_test_multicore_2x1_cce_ucode_cfg          = 53
+    ,e_bp_test_multicore_half_cce_ucode_cfg         = 52
+    ,e_bp_test_multicore_8x1_cfg                    = 51
+    ,e_bp_test_multicore_4x1_cfg                    = 50
+    ,e_bp_test_multicore_2x1_cfg                    = 49
     ,e_bp_test_multicore_half_cfg                   = 48
     ,e_bp_test_unicore_half_cfg                     = 47
 
