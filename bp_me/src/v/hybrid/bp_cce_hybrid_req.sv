@@ -37,7 +37,8 @@ module bp_cce_hybrid_req
     // TODO: evaluate proper sizing of data control fifo
     // A larger data control fifo may allow higher sustained throughput of requests when many
     // requests arrive close in time but only a small fraction have data attached
-    , parameter data_ctrl_els_p = 2
+    , parameter header_fifo_els_p = 2
+    , parameter data_ctrl_els_p = header_fifo_els_p
 
     // interface widths
     `declare_bp_bedrock_lce_if_widths(paddr_width_p, lce_id_width_p, cce_id_width_p, lce_assoc_p, lce)
@@ -93,8 +94,10 @@ module bp_cce_hybrid_req
   logic lce_req_header_v_li, lce_req_header_yumi_lo, lce_req_has_data_li;
   logic lce_req_header_ready_and_lo;
   bp_bedrock_lce_req_header_s  lce_req_header_li;
-  bsg_two_fifo
-    #(.width_p(lce_req_header_width_lp+1))
+  bsg_fifo_1r1w_small
+    #(.width_p(lce_req_header_width_lp+1)
+      ,.els_p(header_fifo_els_p)
+      )
     header_buffer
      (.clk_i(clk_i)
       ,.reset_i(reset_i)

@@ -19,6 +19,7 @@ module bp_cce_hybrid
 
     , parameter lce_data_width_p           = dword_width_gp
     , parameter mem_data_width_p           = dword_width_gp
+    , parameter req_header_fifo_els_p      = 2
     , parameter req_data_ctrl_els_p        = 2
     , parameter coh_header_fifo_els_p      = 2
     , parameter coh_data_fifo_els_p        = 2
@@ -174,6 +175,7 @@ module bp_cce_hybrid
   bp_cce_hybrid_req
     #(.bp_params_p(bp_params_p)
       ,.lce_data_width_p(lce_data_width_p)
+      ,.header_fifo_els_p(req_header_fifo_els_p)
       ,.data_ctrl_els_p(req_data_ctrl_els_p)
       )
     request_arbiter

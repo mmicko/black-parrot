@@ -489,17 +489,17 @@ module bp_cce_hybrid_coh_pipe
     ,e_read_dir
     ,e_wait_dir_gad
     ,e_write_next_state
-    ,e_inv_cmd
-    ,e_inv_ack
     ,e_replacement
     ,e_replacement_wb_resp
-    ,e_uc_coherent_cmd
-    ,e_uc_coherent_resp
-    ,e_uc_coherent_mem_cmd
+    ,e_inv_cmd
+    ,e_inv_ack
     ,e_upgrade_stw_cmd
     ,e_transfer
     ,e_transfer_wb_resp
     ,e_resolve_speculation
+    ,e_uc_coherent_cmd
+    ,e_uc_coherent_resp
+    ,e_uc_coherent_mem_cmd
     ,e_error
   } state_e;
 
@@ -957,103 +957,6 @@ module bp_cce_hybrid_coh_pipe
         end
       end // e_inv_ack
 
-      // Process uncached request to coherent memory space
-      e_uc_coherent_cmd: begin
-        // at this point for amo/uncached request to coherent memory, the requesting LCE
-        // has had block invalidated and written back if needed. All sharers (COH_S) blocks were
-        // also invalidated.
-
-        // if an owner has block it needs to be invalidated and written back (if required)
-        if (uc_inv_owner) begin
-          lce_cmd_header_v_o = 1'b1;
-          lce_cmd_has_data_o = 1'b0;
-
-          lce_cmd_header_cast_o.addr = paddr_aligned;
-          lce_cmd_header_cast_o.payload.dst_id = mshr_r.owner_lce_id;
-          lce_cmd_header_cast_o.payload.way_id = mshr_r.owner_way_id;
-          lce_cmd_header_cast_o.payload.state = e_COH_I;
-
-          // either invalidate or set tag and writeback
-          // if owner is in F state, block is clean, so only need to invalidate
-          // else, block in E, M, or O, need to invalidate and writeback
-          lce_cmd_header_cast_o.msg_type.cmd = mshr_r.flags[e_opd_cff]
-                                 ? e_bedrock_cmd_inv
-                                 : e_bedrock_cmd_st_wb;
-
-          // update state of owner in directory
-          dir_w_v = lce_cmd_header_v_o & lce_cmd_header_ready_and_i;
-          dir_cmd = e_wds_op;
-          dir_addr_li = paddr_aligned;
-          dir_lce_li = mshr_r.owner_lce_id;
-          dir_way_li = mshr_r.owner_way_id;
-          dir_coh_state_li = e_COH_I;
-
-          state_n = (lce_cmd_header_v_o & lce_cmd_header_ready_and_i)
-                    ? e_uc_coherent_resp
-                    : e_uc_coherent_cmd;
-        end
-        // no other LCE is owner
-        else begin
-          state_n = e_uc_coherent_mem_cmd;
-        end
-      end // e_uc_coherent_cmd
-
-      // amo/uc wait for replacement writeback or invalidation ack if sent
-      // writeback is forwarded to memory by LCE response module
-      e_uc_coherent_resp: begin
-        state_n = (wb_yumi_i | inv_yumi_i)
-                  ? e_uc_coherent_mem_cmd
-                  : state_r;
-      end // e_uc_coherent_resp
-
-      // amo/uc after inv_ack/wb_response, issue op to memory
-      // writes pending bit
-      e_uc_coherent_mem_cmd: begin
-        // set message type, valid out, and LCE request data yumi
-        unique case (mshr_r.msg_type.req)
-          e_bedrock_req_uc_rd: begin
-            mem_cmd_base_header_lo.msg_type = e_bedrock_mem_uc_rd;
-            mem_cmd_v_lo = 1'b1;
-          end
-          e_bedrock_req_uc_wr: begin
-            mem_cmd_base_header_lo.msg_type = e_bedrock_mem_uc_wr;
-            mem_cmd_v_lo = lce_req_data_v_li;
-            lce_req_data_yumi_lo = mem_cmd_v_lo & mem_cmd_ready_and_li;
-          end
-          e_bedrock_req_uc_amo: begin
-            mem_cmd_base_header_lo.msg_type = e_bedrock_mem_amo;
-            mem_cmd_v_lo = lce_req_data_v_li;
-            lce_req_data_yumi_lo = mem_cmd_v_lo & mem_cmd_ready_and_li;
-          end
-          default: begin
-          end
-        endcase
-        // uncached/amo address must be aligned appropriate to the request size
-        // in the LCE request (which is stored in the MSHR)
-        mem_cmd_base_header_lo.addr = mshr_r.paddr;
-        mem_cmd_base_header_lo.size = mshr_r.msg_size;
-        mem_cmd_base_header_lo.payload.lce_id = mshr_r.lce_id;
-        mem_cmd_base_header_lo.payload.way_id = '0;
-        // this op is uncached in LCE for both amo or uncached requests
-        mem_cmd_base_header_lo.payload.uncached = 1'b1;
-        mem_cmd_data_lo = lce_req_data_li;
-
-        // Do NOT write pending bit for this memory command.
-        // Uncached requests to coherent memory write the pending bit when they are processed
-        // by the pending module. This write is associated with the required memory command
-        // that every uncached memory access performs. The memory response will decrement
-        // the pending bit when it returns, thereby closing the request and allowing the next
-        // request to proceed (uncached requests do not have an ack back to the CCE from the LCE
-        // so the best we can do for ordering is ensure the data is on its way to the LCE before
-        // moving on).
-
-        // if last beat is acked, check if pending write happened
-        state_n = mem_cmd_stream_done_li
-                  ? e_ready
-                  : e_uc_coherent_mem_cmd;
-
-      end // e_uc_coherent_mem_cmd
-
       e_transfer: begin
         // Transfer required:
         // 1. write request: set state and transfer, invalidate owner, requestor to M
@@ -1179,6 +1082,103 @@ module bp_cce_hybrid_coh_pipe
         end
         state_n = e_ready;
       end // e_resolve_speculation
+
+      // Process uncached request to coherent memory space
+      e_uc_coherent_cmd: begin
+        // at this point for amo/uncached request to coherent memory, the requesting LCE
+        // has had block invalidated and written back if needed. All sharers (COH_S) blocks were
+        // also invalidated.
+
+        // if an owner has block it needs to be invalidated and written back (if required)
+        if (uc_inv_owner) begin
+          lce_cmd_header_v_o = 1'b1;
+          lce_cmd_has_data_o = 1'b0;
+
+          lce_cmd_header_cast_o.addr = paddr_aligned;
+          lce_cmd_header_cast_o.payload.dst_id = mshr_r.owner_lce_id;
+          lce_cmd_header_cast_o.payload.way_id = mshr_r.owner_way_id;
+          lce_cmd_header_cast_o.payload.state = e_COH_I;
+
+          // either invalidate or set tag and writeback
+          // if owner is in F state, block is clean, so only need to invalidate
+          // else, block in E, M, or O, need to invalidate and writeback
+          lce_cmd_header_cast_o.msg_type.cmd = mshr_r.flags[e_opd_cff]
+                                 ? e_bedrock_cmd_inv
+                                 : e_bedrock_cmd_st_wb;
+
+          // update state of owner in directory
+          dir_w_v = lce_cmd_header_v_o & lce_cmd_header_ready_and_i;
+          dir_cmd = e_wds_op;
+          dir_addr_li = paddr_aligned;
+          dir_lce_li = mshr_r.owner_lce_id;
+          dir_way_li = mshr_r.owner_way_id;
+          dir_coh_state_li = e_COH_I;
+
+          state_n = (lce_cmd_header_v_o & lce_cmd_header_ready_and_i)
+                    ? e_uc_coherent_resp
+                    : e_uc_coherent_cmd;
+        end
+        // no other LCE is owner
+        else begin
+          state_n = e_uc_coherent_mem_cmd;
+        end
+      end // e_uc_coherent_cmd
+
+      // amo/uc wait for replacement writeback or invalidation ack if sent
+      // writeback is forwarded to memory by LCE response module
+      e_uc_coherent_resp: begin
+        state_n = (wb_yumi_i | inv_yumi_i)
+                  ? e_uc_coherent_mem_cmd
+                  : state_r;
+      end // e_uc_coherent_resp
+
+      // amo/uc after inv_ack/wb_response, issue op to memory
+      // writes pending bit
+      e_uc_coherent_mem_cmd: begin
+        // set message type, valid out, and LCE request data yumi
+        unique case (mshr_r.msg_type.req)
+          e_bedrock_req_uc_rd: begin
+            mem_cmd_base_header_lo.msg_type = e_bedrock_mem_uc_rd;
+            mem_cmd_v_lo = 1'b1;
+          end
+          e_bedrock_req_uc_wr: begin
+            mem_cmd_base_header_lo.msg_type = e_bedrock_mem_uc_wr;
+            mem_cmd_v_lo = lce_req_data_v_li;
+            lce_req_data_yumi_lo = mem_cmd_v_lo & mem_cmd_ready_and_li;
+          end
+          e_bedrock_req_uc_amo: begin
+            mem_cmd_base_header_lo.msg_type = e_bedrock_mem_amo;
+            mem_cmd_v_lo = lce_req_data_v_li;
+            lce_req_data_yumi_lo = mem_cmd_v_lo & mem_cmd_ready_and_li;
+          end
+          default: begin
+          end
+        endcase
+        // uncached/amo address must be aligned appropriate to the request size
+        // in the LCE request (which is stored in the MSHR)
+        mem_cmd_base_header_lo.addr = mshr_r.paddr;
+        mem_cmd_base_header_lo.size = mshr_r.msg_size;
+        mem_cmd_base_header_lo.payload.lce_id = mshr_r.lce_id;
+        mem_cmd_base_header_lo.payload.way_id = '0;
+        // this op is uncached in LCE for both amo or uncached requests
+        mem_cmd_base_header_lo.payload.uncached = 1'b1;
+        mem_cmd_data_lo = lce_req_data_li;
+
+        // Do NOT write pending bit for this memory command.
+        // Uncached requests to coherent memory write the pending bit when they are processed
+        // by the pending module. This write is associated with the required memory command
+        // that every uncached memory access performs. The memory response will decrement
+        // the pending bit when it returns, thereby closing the request and allowing the next
+        // request to proceed (uncached requests do not have an ack back to the CCE from the LCE
+        // so the best we can do for ordering is ensure the data is on its way to the LCE before
+        // moving on).
+
+        // if last beat is acked, check if pending write happened
+        state_n = mem_cmd_stream_done_li
+                  ? e_ready
+                  : e_uc_coherent_mem_cmd;
+
+      end // e_uc_coherent_mem_cmd
 
       e_error: begin
         state_n = e_error;
