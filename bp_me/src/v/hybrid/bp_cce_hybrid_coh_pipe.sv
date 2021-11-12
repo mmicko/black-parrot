@@ -4,7 +4,8 @@
  *   bp_cce_hybrid_coh_pipe.sv
  *
  * Description:
- *   This module process cached or uncached requests to cacheable memory.
+ *   This module processes cached or uncached requests to cacheable memory.
+ *   It contains the coherence directory and pending queue and bits.
  *
  */
 
@@ -28,7 +29,7 @@ module bp_cce_hybrid_coh_pipe
     , localparam lg_num_lce_lp             = `BSG_SAFE_CLOG2(num_lce_p)
     , localparam lg_lce_assoc_lp           = `BSG_SAFE_CLOG2(lce_assoc_p)
 
-    , localparam num_way_groups_lp = `BSG_CDIV(cce_way_groups_p, num_cce_p)
+    , localparam num_way_groups_lp         = `BSG_CDIV(cce_way_groups_p, num_cce_p)
 
     , localparam block_size_in_bytes_lp    = cce_block_width_p/8
     , localparam lg_block_size_in_bytes_lp = `BSG_SAFE_CLOG2(block_size_in_bytes_lp)
@@ -37,8 +38,8 @@ module bp_cce_hybrid_coh_pipe
     , localparam max_tag_sets_lp           = `BSG_CDIV(lce_sets_p, num_cce_p)
     , localparam lg_max_tag_sets_lp        = `BSG_SAFE_CLOG2(max_tag_sets_lp)
 
-    , localparam counter_max_lp = 256
-    , localparam counter_width_lp = `BSG_SAFE_CLOG2(counter_max_lp+1)
+    , localparam counter_max_lp            = 256
+    , localparam counter_width_lp          = `BSG_SAFE_CLOG2(counter_max_lp+1)
 
     // interface widths
     `declare_bp_bedrock_lce_if_widths(paddr_width_p, lce_id_width_p, cce_id_width_p, lce_assoc_p, lce)
@@ -74,6 +75,15 @@ module bp_cce_hybrid_coh_pipe
 
    , input                                          inv_yumi_i
    , input                                          wb_yumi_i
+
+   // to programmable pipeline
+   , output logic [lce_req_header_width_lp-1:0]     lce_req_header_o
+   , output logic                                   lce_req_header_v_o
+   , input                                          lce_req_header_ready_and_i
+   // from programmable pipeline
+   , input                                          prog_v_i
+   , output logic                                   prog_yumi_o
+   , input                                          prog_status_i // 1 = okay, 0 = squash
 
    // CCE-MEM Interface
    // BedRock Stream protocol: ready&valid
@@ -132,10 +142,10 @@ module bp_cce_hybrid_coh_pipe
 
   // Pending Bits and Queue
   logic pending_empty;
-  logic buf_lce_req_header_v_li, buf_lce_req_header_ready_and_lo, buf_lce_req_has_data_li;
-  bp_bedrock_lce_req_header_s  buf_lce_req_header_li;
-  logic buf_lce_req_data_v_li, buf_lce_req_data_ready_and_lo, buf_lce_req_last_li;
-  logic [lce_data_width_p-1:0]  buf_lce_req_data_li;
+  logic pending_lce_req_header_v_lo, pending_lce_req_header_ready_and_li, pending_lce_req_has_data_lo;
+  bp_bedrock_lce_req_header_s  pending_lce_req_header_lo;
+  logic pending_lce_req_data_v_lo, pending_lce_req_data_ready_and_li, pending_lce_req_last_lo;
+  logic [lce_data_width_p-1:0]  pending_lce_req_data_lo;
 
   // pending bits write input
   // these must be arbitrated between the three write ports: FSM, LCE Response, Mem Response
@@ -165,14 +175,14 @@ module bp_cce_hybrid_coh_pipe
       ,.lce_req_last_i(lce_req_last_i)
       // request to pipeline
       // guaranteed to be ready for execution
-      ,.lce_req_header_o(buf_lce_req_header_li)
-      ,.lce_req_header_v_o(buf_lce_req_header_v_li)
-      ,.lce_req_header_ready_and_i(buf_lce_req_header_ready_and_lo)
-      ,.lce_req_has_data_o(buf_lce_req_has_data_li)
-      ,.lce_req_data_o(buf_lce_req_data_li)
-      ,.lce_req_data_v_o(buf_lce_req_data_v_li)
-      ,.lce_req_data_ready_and_i(buf_lce_req_data_ready_and_lo)
-      ,.lce_req_last_o(buf_lce_req_last_li)
+      ,.lce_req_header_o(pending_lce_req_header_lo)
+      ,.lce_req_header_v_o(pending_lce_req_header_v_lo)
+      ,.lce_req_header_ready_and_i(pending_lce_req_header_ready_and_li)
+      ,.lce_req_has_data_o(pending_lce_req_has_data_lo)
+      ,.lce_req_data_o(pending_lce_req_data_lo)
+      ,.lce_req_data_v_o(pending_lce_req_data_v_lo)
+      ,.lce_req_data_ready_and_i(pending_lce_req_data_ready_and_li)
+      ,.lce_req_last_o(pending_lce_req_last_lo)
       // Pending bits write port - from memory response pipe wbuf or FSM
       ,.pending_w_v_i(pending_w_v)
       ,.pending_w_yumi_o(pending_w_yumi)
@@ -188,6 +198,7 @@ module bp_cce_hybrid_coh_pipe
   // Header Buffer
   logic lce_req_header_v_li, lce_req_header_yumi_lo, lce_req_has_data_li;
   bp_bedrock_lce_req_header_s  lce_req_header_li;
+  logic buf_lce_req_header_v_li, buf_lce_req_ready_and_lo;
   bsg_fifo_1r1w_small
     #(.width_p(lce_req_header_width_lp+1)
       ,.els_p(header_fifo_els_p)
@@ -198,12 +209,22 @@ module bp_cce_hybrid_coh_pipe
       // input
       ,.v_i(buf_lce_req_header_v_li)
       ,.ready_o(buf_lce_req_header_ready_and_lo)
-      ,.data_i({buf_lce_req_has_data_li, buf_lce_req_header_li})
+      ,.data_i({pending_lce_req_has_data_lo, pending_lce_req_header_lo})
       // output
       ,.v_o(lce_req_header_v_li)
       ,.yumi_i(lce_req_header_yumi_lo)
       ,.data_o({lce_req_has_data_li, lce_req_header_li})
       );
+
+  // connect LCE request header output (to programmable pipeline) to input of header buffer
+  // this disconnects the coherent pipe FSM from the programmable pipe
+  assign lce_req_header_o = pending_lce_req_header_lo;
+  // pending module header ready is & of buffer and output ready signals
+  assign pending_lce_req_header_ready_and_li = lce_req_header_ready_and_i & buf_lce_req_header_ready_and_lo;
+  // only raise valid signal to buffer or header out (prog pipe) if the other is ready
+  // this works because interfaces are true ready&valid where the ready is early
+  assign buf_lce_req_header_v_li = pending_lce_req_header_v_lo & lce_req_header_ready_and_i;
+  assign lce_req_header_v_o = pending_lce_req_header_v_lo & buf_lce_req_header_ready_and_lo;
 
   // Data buffer
   logic lce_req_data_v_li, lce_req_data_yumi_lo, lce_req_last_li;
@@ -216,9 +237,9 @@ module bp_cce_hybrid_coh_pipe
      (.clk_i(clk_i)
       ,.reset_i(reset_i)
       // input
-      ,.v_i(buf_lce_req_data_v_li)
-      ,.ready_o(buf_lce_req_data_ready_and_lo)
-      ,.data_i({buf_lce_req_last_li, buf_lce_req_data_li})
+      ,.v_i(pending_lce_req_data_v_lo)
+      ,.ready_o(pending_lce_req_data_ready_and_li)
+      ,.data_i({pending_lce_req_last_lo, pending_lce_req_data_lo})
       // output
       ,.v_o(lce_req_data_v_li)
       ,.yumi_i(lce_req_data_yumi_lo)
@@ -248,13 +269,13 @@ module bp_cce_hybrid_coh_pipe
   logic [lce_id_width_p-1:0] gad_owner_lce_lo;
   logic [lg_lce_assoc_lp-1:0] gad_owner_lce_way_lo;
   bp_coh_states_e gad_owner_coh_state_lo;
-  logic gad_replacement_flag_lo;
-  logic gad_upgrade_flag_lo;
-  logic gad_cached_shared_flag_lo;
-  logic gad_cached_exclusive_flag_lo;
-  logic gad_cached_modified_flag_lo;
-  logic gad_cached_owned_flag_lo;
-  logic gad_cached_forward_flag_lo;
+  logic gad_rf_lo;
+  logic gad_uf_lo;
+  logic gad_csf_lo;
+  logic gad_cef_lo;
+  logic gad_cmf_lo;
+  logic gad_cof_lo;
+  logic gad_cff_lo;
 
   // Directory
   bp_cce_dir
@@ -314,13 +335,13 @@ module bp_cce_hybrid_coh_pipe
       ,.owner_lce_o(gad_owner_lce_lo)
       ,.owner_way_o(gad_owner_lce_way_lo)
       ,.owner_coh_state_o(gad_owner_coh_state_lo)
-      ,.replacement_flag_o(gad_replacement_flag_lo)
-      ,.upgrade_flag_o(gad_upgrade_flag_lo)
-      ,.cached_shared_flag_o(gad_cached_shared_flag_lo)
-      ,.cached_exclusive_flag_o(gad_cached_exclusive_flag_lo)
-      ,.cached_modified_flag_o(gad_cached_modified_flag_lo)
-      ,.cached_owned_flag_o(gad_cached_owned_flag_lo)
-      ,.cached_forward_flag_o(gad_cached_forward_flag_lo)
+      ,.replacement_flag_o(gad_rf_lo)
+      ,.upgrade_flag_o(gad_uf_lo)
+      ,.cached_shared_flag_o(gad_csf_lo)
+      ,.cached_exclusive_flag_o(gad_cef_lo)
+      ,.cached_modified_flag_o(gad_cmf_lo)
+      ,.cached_owned_flag_o(gad_cof_lo)
+      ,.cached_forward_flag_o(gad_cff_lo)
       );
 
   // Memory Command Stream Pump
@@ -459,18 +480,21 @@ module bp_cce_hybrid_coh_pipe
                        & ~mshr_r.flags.upgrade & ~mshr_r.flags.uncached;
   // Upgrade with block in O or F in other LCE should invalidate owner.
   // No need to writeback because requestor will get read/write permissions and has up-to-date block
+  // Upgrade flag only set if cacheable request
   wire upgrade_inv_owner = mshr_r.flags.upgrade
                            & (mshr_r.flags.cached_owned | mshr_r.flags.cached_forward);
   // invalidations occur if write request and any block in S state (shared, not owner)
   // also need to invalidate owner in O or F when doing upgrade
-  wire inv_sharers = (mshr_r.flags.write_not_read & mshr_r.flags.cached_shared);
+  wire inv_sharers = (~mshr_r.flags.uncached & mshr_r.flags.write_not_read & mshr_r.flags.cached_shared);
 
   // flags for uncached requests
   // all sharers need to be invalidated, regardless of read or write request
-  wire uc_inv_sharers = mshr_r.flags.cached_shared;
-  wire uc_inv_owner = mshr_r.flags.cached_forward | mshr_r.flags.cached_exclusive
-                      | mshr_r.flags.cached_modified | mshr_r.flags.cached_owned;
+  wire uc_inv_sharers = mshr_r.flags.uncached & mshr_r.flags.cached_shared;
+  wire uc_inv_owner = mshr_r.flags.uncached
+                      & (mshr_r.flags.cached_forward | mshr_r.flags.cached_exclusive
+                         | mshr_r.flags.cached_modified | mshr_r.flags.cached_owned);
 
+  // invalidation flag - for either cacheable or uncacheable requests
   wire invalidate_flag = inv_sharers | uc_inv_sharers | upgrade_inv_owner;
 
   // aligned address for block-based actions
@@ -484,19 +508,24 @@ module bp_cce_hybrid_coh_pipe
   typedef enum logic [4:0] {
     e_reset
     ,e_clear_dir
+    // setup for all requests
     ,e_ready
     ,e_read_mem_spec
     ,e_read_dir
     ,e_wait_dir_gad
-    ,e_write_next_state
     ,e_replacement
     ,e_replacement_wb_resp
     ,e_inv_cmd
     ,e_inv_ack
+    // sync with programmable pipe
+    ,e_prog_sync
+    // cached completion
+    ,e_write_next_state
     ,e_upgrade_stw_cmd
     ,e_transfer
     ,e_transfer_wb_resp
     ,e_resolve_speculation
+    // uncached completion
     ,e_uc_coherent_cmd
     ,e_uc_coherent_resp
     ,e_uc_coherent_mem_cmd
@@ -522,6 +551,8 @@ module bp_cce_hybrid_coh_pipe
     mem_cmd_base_header_lo = '0;
     mem_cmd_data_lo = '0;
     mem_cmd_v_lo = 1'b0;
+
+    prog_yumi_o = 1'b0;
 
     // lce command defaults
     lce_cmd_header_cast_o = '0;
@@ -608,7 +639,7 @@ module bp_cce_hybrid_coh_pipe
         cnt_0_inc = cnt_1_clr & ~cnt_0_clr;
 
         // Stay in e_clear_dir until cnt_0_clr goes high
-        state_n = cnt_0_clr ? e_ready : e_clear_dir;
+        state_n = cnt_0_clr ? e_ready : state_r;
       end // e_clear_dir
 
       // Process requests that have cleared pending bit check
@@ -617,6 +648,20 @@ module bp_cce_hybrid_coh_pipe
       // 2. uncached request
       // 3. amo request
       // only normal, cached requests will issue a speculative memory read
+
+      // Ordering of coherence actions:
+      // Replacement, if needed
+      // - requesting LCE has a valid block in LRU way
+      // - uncached or amo request and requesting LCE has target address cached
+      // Invalidations, if needed
+      // - cacheable write request and cached shared by other LCEs
+      // - uncached request (rd or wr) and cached shared by other LCEs
+      // - upgrade (cacheable req) and cached O or F by other
+      // Sync with programmable pipeline
+      // Update directory state for this request
+      // Uncacheable access
+      // or Cacheable access: Upgrade, Transfer, or Memory access (resolve speculative access)
+
       e_ready: begin
         // clear counters
         cnt_0_clr = 1'b1;
@@ -707,7 +752,7 @@ module bp_cce_hybrid_coh_pipe
         spec_bits_o.fwd_mod = 1'b0;
         spec_bits_o.state = e_COH_I;
 
-        state_n = (mem_cmd_stream_done_li) ? e_read_dir : e_read_mem_spec;
+        state_n = (mem_cmd_stream_done_li) ? e_read_dir : state_r;
 
       end // e_read_mem_spec
 
@@ -741,13 +786,13 @@ module bp_cce_hybrid_coh_pipe
 
           mshr_n.way_id = gad_req_addr_way_lo;
 
-          mshr_n.flags.replacement = gad_replacement_flag_lo;
-          mshr_n.flags.upgrade = gad_upgrade_flag_lo;
-          mshr_n.flags.cached_shared = gad_cached_shared_flag_lo;
-          mshr_n.flags.cached_exclusive = gad_cached_exclusive_flag_lo;
-          mshr_n.flags.cached_modified = gad_cached_modified_flag_lo;
-          mshr_n.flags.cached_owned = gad_cached_owned_flag_lo;
-          mshr_n.flags.cached_forward = gad_cached_forward_flag_lo;
+          mshr_n.flags.replacement = gad_rf_lo;
+          mshr_n.flags.upgrade = gad_uf_lo;
+          mshr_n.flags.cached_shared = gad_csf_lo;
+          mshr_n.flags.cached_exclusive = gad_cef_lo;
+          mshr_n.flags.cached_modified = gad_cmf_lo;
+          mshr_n.flags.cached_owned = gad_cof_lo;
+          mshr_n.flags.cached_forward = gad_cff_lo;
 
           mshr_n.owner_lce_id = gad_owner_lce_lo;
           mshr_n.owner_way_id = gad_owner_lce_way_lo;
@@ -764,100 +809,66 @@ module bp_cce_hybrid_coh_pipe
             ? e_COH_I
             : (mshr_r.flags.write_not_read)
               ? e_COH_M
-              : (mshr_r.flags.non_exclusive | gad_cached_shared_flag_lo | gad_cached_exclusive_flag_lo
-                 | gad_cached_modified_flag_lo | gad_cached_owned_flag_lo | gad_cached_forward_flag_lo)
+              : (mshr_r.flags.non_exclusive | gad_csf_lo | gad_cef_lo
+                 | gad_cmf_lo | gad_cof_lo | gad_cff_lo)
                 ? e_COH_S
                 : e_COH_E;
 
-          state_n = e_write_next_state;
+          // choose next state - replacement, invalidations, or sync with programmable pipe
+          // replace (invalidate existing block) in LCE if:
+          // 1. cacheable req, not an upgrade, and LRU block may be dirty (E, M, or O)
+          // 2. uncacheable req and target block in any state in requesting LCE
+          if (gad_rf_lo) begin
+            state_n = e_replacement;
+          end
+          // invalidate if:
+          // 1. cacheable write request and any block in S
+          // 2. cacheable write that is upgrade and owner in O or F
+          // 3. uncacheable request and any block in S
+          // note: this is same logic as invalidate_flag signal, but using GAD results directly
+          else if ((~mshr_r.flags.uncached & mshr_r.flags.write_not_read & gad_csf_lo)
+                   | (gad_uf_lo & (gad_cof_lo | gad_cff_lo))
+                   | (mshr_r.flags.uncached & gad_csf_lo)
+                   ) begin
+            // setup required for sending invalidations
+            // don't invalidate the requesting LCE
+            pe_sharers_n = sharers_hits_r & ~req_lce_id_one_hot;
+            // if doing a transfer or uncached req and owner exists, also remove owner LCE since
+            // transfer routine will take care of setting owner into correct new state
+            // and uncached sequence will writeback owner
+            // equivalent to: (transfer_flag | uc_inv_owner)
+            pe_sharers_n = ((gad_cef_lo | gad_cmf_lo | gad_cof_lo | gad_cff_lo)
+                            & ((~gad_uf_lo & ~mshr_r.flags.uncached) | mshr_r.flags.uncached)
+                           )
+                           ? pe_sharers_n & ~owner_lce_id_one_hot
+                           : pe_sharers_n;
+            cnt_rst = 1'b1;
+
+            state_n = e_inv_cmd;
+          end
+          else begin
+            state_n = e_prog_sync;
+          end
+
         end // process GAD output
       end // e_wait_dir_gad
-
-      e_write_next_state: begin
-        // writing to the directory will make the sharers_v_lo signal go low, but in this FSM
-        // CCE we know that the sharers vectors are still valid in the state we need from the
-        // previous read, so we perform the coherence state update for the requesting LCE anyway
-
-        dir_lce_li = mshr_r.lce_id;
-        dir_addr_li = mshr_r.paddr;
-        dir_coh_state_li = mshr_r.next_coh_state;
-
-        // upgrade detected, only change state
-        if (mshr_r.flags.upgrade) begin
-          dir_w_v = 1'b1;
-          dir_cmd = e_wds_op;
-          dir_way_li = mshr_r.way_id;
-
-        // amo or uncached to coherent memory
-        // only write directory if replacement flag is set indicating the requsting LCE has
-        // the block cached already
-        end else if (mshr_r.flags.atomic | mshr_r.flags.uncached) begin
-          dir_w_v = mshr_r.flags.replacement;
-          dir_cmd = e_wds_op;
-          // the block, if cached at the LCE, is in the way indicated by the way_id field of
-          // the MSHR as produced by the GAD module
-          dir_way_li = mshr_r.way_id;
-
-        // normal requests, write tag and state
-        end else begin
-          dir_w_v = 1'b1;
-          dir_cmd = e_wde_op;
-          dir_way_li = mshr_r.lru_way_id;
-        end
-
-        // Ordering of coherence actions:
-        // Replacement, if needed
-        // - requesting LCE has a valid block in LRU way
-        // - uncached or amo request and requesting LCE has target address cached
-        // Invalidations, if needed
-        // - cacheable write request and cached shared by other LCEs
-        // - uncached request (rd or wr) and cached shared by other LCEs
-        // - upgrade and cached O or F by other
-        // Uncacheable access
-        // or Cacheable access: Upgrade, Transfer, or Memory access (resolve speculative access)
-        state_n =
-          (mshr_r.flags.replacement)
-          ? e_replacement
-          : (invalidate_flag)
-            ? e_inv_cmd
-            : (mshr_r.flags.atomic | mshr_r.flags.uncached)
-              ? uc_inv_owner
-                ? e_uc_coherent_cmd
-                : e_uc_coherent_mem_cmd
-              : (mshr_r.flags.upgrade)
-                ? e_upgrade_stw_cmd
-                : (transfer_flag)
-                  ? e_transfer
-                  : e_resolve_speculation;
-
-        // setup required state for sending invalidations
-        // only if next state is invalidations (i.e., not doing a replacement)
-        if (~mshr_r.flags.replacement & invalidate_flag) begin
-          // don't invalidate the requesting LCE
-          pe_sharers_n = sharers_hits_r & ~req_lce_id_one_hot;
-          // if doing a transfer, also remove owner LCE since transfer
-          // routine will take care of setting owner into correct new state
-          pe_sharers_n = transfer_flag
-                         ? pe_sharers_n & ~owner_lce_id_one_hot
-                         : pe_sharers_n;
-          cnt_rst = 1'b1;
-        end
-
-      end // e_write_next_state
 
       e_replacement: begin
         lce_cmd_header_v_o = 1'b1;
         lce_cmd_has_data_o = 1'b0;
 
         // set state to invalid and writeback
-        lce_cmd_header_cast_o.msg_type.cmd = e_bedrock_cmd_st_wb;
         // for an uc/amo request, the mshr way_id field indicates the way in which the requesting
         // LCE's copy of the cache block is stored at the LCE
         // note: issue commands with block-aligned address since writeback is for a cached block
         if (mshr_r.flags.atomic | mshr_r.flags.uncached) begin
+          // TODO: this issues a writeback even if block is known clean and read-only
+          // could check owner LCE against requesting LCE then check owner state reported by GAD
+          lce_cmd_header_cast_o.msg_type.cmd = e_bedrock_cmd_st_wb;
           lce_cmd_header_cast_o.payload.way_id = mshr_r.way_id;
           lce_cmd_header_cast_o.addr = paddr_aligned;
         end else begin
+          lce_cmd_header_cast_o.msg_type.cmd = e_bedrock_cmd_st_wb;
           lce_cmd_header_cast_o.payload.way_id = mshr_r.lru_way_id;
           lce_cmd_header_cast_o.addr = lru_paddr_aligned;
         end
@@ -868,7 +879,7 @@ module bp_cce_hybrid_coh_pipe
 
         state_n = (lce_cmd_header_v_o & lce_cmd_header_ready_and_i)
                   ? e_replacement_wb_resp
-                  : e_replacement;
+                  : state_r;
       end // e_replacement
 
       e_replacement_wb_resp: begin
@@ -877,21 +888,15 @@ module bp_cce_hybrid_coh_pipe
         state_n = wb_yumi_i
                   ? (invalidate_flag)
                     ? e_inv_cmd
-                    : (mshr_r.flags.atomic | mshr_r.flags.uncached)
-                      ? uc_inv_owner
-                        ? e_uc_coherent_cmd
-                        : e_uc_coherent_mem_cmd
-                      : (transfer_flag)
-                        ? e_transfer
-                        : e_resolve_speculation
+                    : e_prog_sync
                   : state_r;
         // setup required state for sending invalidations
         if (invalidate_flag) begin
           // don't invalidate the requesting LCE
           pe_sharers_n = sharers_hits_r & ~req_lce_id_one_hot;
-          // if doing a transfer, also remove owner LCE since transfer
-          // routine will take care of setting owner into correct new state
-          pe_sharers_n = transfer_flag
+          // if doing a transfer or uncached req and owner exists, also remove owner LCE since
+          // transfer routine will take care of setting owner into correct new state
+          pe_sharers_n = (transfer_flag | uc_inv_owner)
                          ? pe_sharers_n & ~owner_lce_id_one_hot
                          : pe_sharers_n;
           cnt_rst = 1'b1;
@@ -934,6 +939,10 @@ module bp_cce_hybrid_coh_pipe
             state_n = e_inv_ack;
           end
         end // pe_v
+        else begin
+          state_n = e_error;
+          $display("e_inv_cmd going to e_error");
+        end
 
         // decrement counter if invalidate ack arrives
         cnt_dec = inv_yumi_i;
@@ -945,17 +954,87 @@ module bp_cce_hybrid_coh_pipe
 
         // move to next state if all acks already arrived or last ack arriving in current cycle
         if ((cnt == '0) || ((cnt == 'd1) && inv_yumi_i)) begin
-          state_n = (mshr_r.flags.atomic | mshr_r.flags.uncached)
-                    ? uc_inv_owner
-                      ? e_uc_coherent_cmd
-                      : e_uc_coherent_mem_cmd
-                    : (mshr_r.flags.upgrade)
-                      ? e_upgrade_stw_cmd
-                      : (transfer_flag)
-                        ? e_transfer
-                        : e_resolve_speculation;
+          state_n = e_prog_sync;
         end
       end // e_inv_ack
+
+      e_prog_sync: begin
+
+        if (prog_v_i) begin
+          // squash speculative memory request (write unconditionally - idempotent)
+          spec_w_v_o = ~prog_status_i;
+          // no longer speculative
+          spec_v_o = 1'b1;
+          spec_bits_o.spec = 1'b0;
+          // squash the response
+          spec_squash_v_o = 1'b1;
+          spec_bits_o.squash = 1'b1;
+
+          // decrement pending bit - must only happen once
+          pending_w_v = ~prog_status_i;
+          pending_w_addr_bypass_hash = 1'b0;
+          pending_up = 1'b0;
+          pending_down = 1'b1;
+          pending_clear = 1'b0;
+          pending_w_addr = mshr_r.paddr;
+
+          // ack programmable pipe when pending write happens or on good status
+          prog_yumi_o = (~prog_status_i & pending_w_yumi) | prog_status_i;
+
+          // if status is good, proceed
+          // else, speculative memory response (if exists) will get squashed and pending bit
+          // will get decremented to close out the request, then back to ready for next request
+          state_n = (prog_yumi_o)
+                    ? (prog_status_i)
+                      ? e_write_next_state
+                      : e_ready
+                    : state_r;
+        end // prog_v_i
+
+      end // e_prog_sync
+
+      e_write_next_state: begin
+        // writing to the directory will make the sharers_v_lo signal go low, but in this FSM
+        // CCE we know that the sharers vectors are still valid in the state we need from the
+        // previous read, so we perform the coherence state update for the requesting LCE anyway
+
+        dir_lce_li = mshr_r.lce_id;
+        dir_addr_li = mshr_r.paddr;
+        dir_coh_state_li = mshr_r.next_coh_state;
+
+        // upgrade detected, only change state
+        if (mshr_r.flags.upgrade) begin
+          dir_w_v = 1'b1;
+          dir_cmd = e_wds_op;
+          dir_way_li = mshr_r.way_id;
+
+        // amo or uncached to coherent memory
+        // only write directory if replacement flag is set indicating the requsting LCE has
+        // the block cached already
+        end else if (mshr_r.flags.atomic | mshr_r.flags.uncached) begin
+          dir_w_v = mshr_r.flags.replacement;
+          dir_cmd = e_wds_op;
+          // the block, if cached at the LCE, is in the way indicated by the way_id field of
+          // the MSHR as produced by the GAD module
+          dir_way_li = mshr_r.way_id;
+
+        // normal requests, write tag and state
+        end else begin
+          dir_w_v = 1'b1;
+          dir_cmd = e_wde_op;
+          dir_way_li = mshr_r.lru_way_id;
+        end
+
+        state_n = (mshr_r.flags.atomic | mshr_r.flags.uncached)
+                  ? (uc_inv_owner)
+                    ? e_uc_coherent_cmd
+                    : e_uc_coherent_mem_cmd
+                  : (mshr_r.flags.upgrade)
+                    ? e_upgrade_stw_cmd
+                    : (transfer_flag)
+                      ? e_transfer
+                      : e_resolve_speculation;
+      end // e_write_next_state
 
       e_transfer: begin
         // Transfer required:
@@ -1087,41 +1166,34 @@ module bp_cce_hybrid_coh_pipe
       e_uc_coherent_cmd: begin
         // at this point for amo/uncached request to coherent memory, the requesting LCE
         // has had block invalidated and written back if needed. All sharers (COH_S) blocks were
-        // also invalidated.
+        // also invalidated. The owner now needs to be invalidated and written back (if required).
 
-        // if an owner has block it needs to be invalidated and written back (if required)
-        if (uc_inv_owner) begin
-          lce_cmd_header_v_o = 1'b1;
-          lce_cmd_has_data_o = 1'b0;
+        lce_cmd_header_v_o = 1'b1;
+        lce_cmd_has_data_o = 1'b0;
 
-          lce_cmd_header_cast_o.addr = paddr_aligned;
-          lce_cmd_header_cast_o.payload.dst_id = mshr_r.owner_lce_id;
-          lce_cmd_header_cast_o.payload.way_id = mshr_r.owner_way_id;
-          lce_cmd_header_cast_o.payload.state = e_COH_I;
+        lce_cmd_header_cast_o.addr = paddr_aligned;
+        lce_cmd_header_cast_o.payload.dst_id = mshr_r.owner_lce_id;
+        lce_cmd_header_cast_o.payload.way_id = mshr_r.owner_way_id;
+        lce_cmd_header_cast_o.payload.state = e_COH_I;
 
-          // either invalidate or set tag and writeback
-          // if owner is in F state, block is clean, so only need to invalidate
-          // else, block in E, M, or O, need to invalidate and writeback
-          lce_cmd_header_cast_o.msg_type.cmd = mshr_r.flags.cached_forward
-                                 ? e_bedrock_cmd_inv
-                                 : e_bedrock_cmd_st_wb;
+        // either invalidate or set tag and writeback
+        // if owner is in F state, block is clean, so only need to invalidate
+        // else, block in E, M, or O, need to invalidate and writeback
+        lce_cmd_header_cast_o.msg_type.cmd = mshr_r.flags.cached_forward
+                               ? e_bedrock_cmd_inv
+                               : e_bedrock_cmd_st_wb;
 
-          // update state of owner in directory
-          dir_w_v = lce_cmd_header_v_o & lce_cmd_header_ready_and_i;
-          dir_cmd = e_wds_op;
-          dir_addr_li = paddr_aligned;
-          dir_lce_li = mshr_r.owner_lce_id;
-          dir_way_li = mshr_r.owner_way_id;
-          dir_coh_state_li = e_COH_I;
+        // update state of owner in directory
+        dir_w_v = lce_cmd_header_v_o & lce_cmd_header_ready_and_i;
+        dir_cmd = e_wds_op;
+        dir_addr_li = paddr_aligned;
+        dir_lce_li = mshr_r.owner_lce_id;
+        dir_way_li = mshr_r.owner_way_id;
+        dir_coh_state_li = e_COH_I;
 
-          state_n = (lce_cmd_header_v_o & lce_cmd_header_ready_and_i)
-                    ? e_uc_coherent_resp
-                    : e_uc_coherent_cmd;
-        end
-        // no other LCE is owner
-        else begin
-          state_n = e_uc_coherent_mem_cmd;
-        end
+        state_n = (lce_cmd_header_v_o & lce_cmd_header_ready_and_i)
+                  ? e_uc_coherent_resp
+                  : state_r;
       end // e_uc_coherent_cmd
 
       // amo/uc wait for replacement writeback or invalidation ack if sent
@@ -1176,12 +1248,12 @@ module bp_cce_hybrid_coh_pipe
         // if last beat is acked, check if pending write happened
         state_n = mem_cmd_stream_done_li
                   ? e_ready
-                  : e_uc_coherent_mem_cmd;
+                  : state_r;
 
       end // e_uc_coherent_mem_cmd
 
       e_error: begin
-        state_n = e_error;
+        state_n = state_r;
       end // e_error
 
       default: begin

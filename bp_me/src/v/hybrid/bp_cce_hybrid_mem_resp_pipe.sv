@@ -5,6 +5,7 @@
  *
  * Description:
  *   This is the memory response pipeline for the hybrid CCE.
+ *   It contains the speculative bits that track outstanding speculative memory accesses.
  *
  *   TODO: re-evaluate buffering requirements with new CCE design
  *   Buffer space is provided for two memory response messages with full cache block of data each.
@@ -43,17 +44,17 @@ module bp_cce_hybrid_mem_resp_pipe
     , localparam max_tag_sets_lp           = `BSG_CDIV(lce_sets_p, num_cce_p)
     , localparam lg_max_tag_sets_lp        = `BSG_SAFE_CLOG2(max_tag_sets_lp)
 
+    , localparam counter_max_lp            = 256
+    , localparam hash_index_width_lp       = $clog2((2**lg_lce_sets_lp+num_cce_p-1)/num_cce_p)
+
+    , localparam counter_width_lp          = `BSG_SAFE_CLOG2(counter_max_lp+1)
+
+    // log2 of dword width bytes
+    , localparam lg_dword_width_bytes_lp   = `BSG_SAFE_CLOG2(dword_width_gp/8)
+
     // interface widths
     `declare_bp_bedrock_lce_if_widths(paddr_width_p, lce_id_width_p, cce_id_width_p, lce_assoc_p, lce)
     `declare_bp_bedrock_mem_if_widths(paddr_width_p, did_width_p, lce_id_width_p, lce_assoc_p, cce)
-
-    , localparam counter_max_lp = 256
-    , localparam hash_index_width_lp=$clog2((2**lg_lce_sets_lp+num_cce_p-1)/num_cce_p)
-
-    , localparam counter_width_lp = `BSG_SAFE_CLOG2(counter_max_lp+1)
-
-    // log2 of dword width bytes
-    , localparam lg_dword_width_bytes_lp = `BSG_SAFE_CLOG2(dword_width_gp/8)
   )
   (input                                            clk_i
    , input                                          reset_i

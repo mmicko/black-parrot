@@ -25,6 +25,7 @@ module bp_cce_hybrid
     , parameter coh_data_fifo_els_p        = 2
     , parameter uc_header_fifo_els_p       = 2
     , parameter uc_data_fifo_els_p         = 2
+    , parameter prog_header_fifo_els_p     = 2
     , parameter mem_resp_header_els_p      = 2
     , parameter lce_resp_header_els_p      = 2
     , parameter mem_cmd_pending_wbuf_els_p = 2
@@ -268,6 +269,12 @@ module bp_cce_hybrid
   bp_bedrock_lce_cmd_header_s lce_cmd_header_li;
   logic [lce_data_width_p-1:0] lce_cmd_data_li;
 
+  // to programmable pipeline
+  bp_bedrock_lce_req_header_s prog_lce_req_header_li;
+  logic prog_lce_req_header_v_li, prog_lce_req_header_ready_and_lo;
+  // from programmable pipeline
+  logic prog_v_lo, prog_yumi_li, prog_status_lo;
+
   bp_cce_hybrid_coh_pipe
     #(.bp_params_p(bp_params_p)
       ,.lce_data_width_p(lce_data_width_p)
@@ -303,6 +310,14 @@ module bp_cce_hybrid
       // LCE response signals
       ,.inv_yumi_i(inv_yumi)
       ,.wb_yumi_i(wb_yumi)
+      // to programmable pipeline
+      ,.lce_req_header_o(prog_lce_req_header_li)
+      ,.lce_req_header_v_o(prog_lce_req_header_v_li)
+      ,.lce_req_header_ready_and_i(prog_lce_req_header_ready_and_lo)
+      // from programmable pipeline
+      ,.prog_v_i(prog_v_lo)
+      ,.prog_yumi_o(prog_yumi_li)
+      ,.prog_status_i(prog_status_lo)
       // memory command output to arbiter
       ,.mem_cmd_header_o(mem_cmd_header_lo)
       ,.mem_cmd_data_o(mem_cmd_data_lo)
@@ -334,6 +349,30 @@ module bp_cce_hybrid
       ,.lce_resp_pending_up_i(lce_resp_pending_up)
       ,.lce_resp_pending_down_i(lce_resp_pending_down)
       ,.lce_resp_pending_clear_i(lce_resp_pending_clear)
+      );
+
+  // Programmable pipe
+  logic prog_pipe_empty;
+  bp_cce_hybrid_prog_pipe
+    #(.bp_params_p(bp_params_p)
+      ,.lce_data_width_p(lce_data_width_p)
+      ,.header_fifo_els_p(prog_header_fifo_els_p)
+      )
+    prog_pipe
+     (.clk_i(clk_i)
+      ,.reset_i(reset_i)
+      // control
+      ,.cce_mode_i(cce_mode)
+      ,.cce_id_i(cce_id)
+      ,.empty_o(prog_pipe_empty)
+      // from coherent pipeline
+      ,.lce_req_header_i(prog_lce_req_header_li)
+      ,.lce_req_header_v_i(prog_lce_req_header_v_li)
+      ,.lce_req_header_ready_and_o(prog_lce_req_header_ready_and_lo)
+      // to coherent pipeline
+      ,.prog_v_o(prog_v_lo)
+      ,.prog_yumi_i(prog_yumi_li)
+      ,.prog_status_o(prog_status_lo)
       );
 
   // Memory Response pipe
