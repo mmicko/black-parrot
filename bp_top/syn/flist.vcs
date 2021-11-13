@@ -276,6 +276,7 @@ $BP_ME_DIR/src/v/hybrid/bp_cce_hybrid_pending.sv
 $BP_ME_DIR/src/v/hybrid/bp_cce_hybrid_req.sv
 $BP_ME_DIR/src/v/hybrid/bp_cce_hybrid.sv
 $BP_ME_DIR/src/v/hybrid/bp_cce_hybrid_uc_pipe.sv
+$BP_ME_DIR/src/v/hybrid/bp_cce_hybrid_prog_pipe.sv
 # BedRock
 $BP_ME_DIR/src/v/cce/bp_bedrock_size_to_len.sv
 # Network
