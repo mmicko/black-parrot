@@ -513,6 +513,8 @@ module bp_cce_hybrid_coh_pipe
     ,e_read_mem_spec
     ,e_read_dir
     ,e_wait_dir_gad
+    // select next action: replacement, invalidation, prog_sync
+    ,e_ris_select
     ,e_replacement
     ,e_replacement_wb_resp
     ,e_inv_cmd
@@ -814,44 +816,41 @@ module bp_cce_hybrid_coh_pipe
                 ? e_COH_S
                 : e_COH_E;
 
-          // choose next state - replacement, invalidations, or sync with programmable pipe
-          // replace (invalidate existing block) in LCE if:
-          // 1. cacheable req, not an upgrade, and LRU block may be dirty (E, M, or O)
-          // 2. uncacheable req and target block in any state in requesting LCE
-          if (gad_rf_lo) begin
-            state_n = e_replacement;
-          end
-          // invalidate if:
-          // 1. cacheable write request and any block in S
-          // 2. cacheable write that is upgrade and owner in O or F
-          // 3. uncacheable request and any block in S
-          // note: this is same logic as invalidate_flag signal, but using GAD results directly
-          else if ((~mshr_r.flags.uncached & mshr_r.flags.write_not_read & gad_csf_lo)
-                   | (gad_uf_lo & (gad_cof_lo | gad_cff_lo))
-                   | (mshr_r.flags.uncached & gad_csf_lo)
-                   ) begin
-            // setup required for sending invalidations
-            // don't invalidate the requesting LCE
-            pe_sharers_n = sharers_hits_r & ~req_lce_id_one_hot;
-            // if doing a transfer or uncached req and owner exists, also remove owner LCE since
-            // transfer routine will take care of setting owner into correct new state
-            // and uncached sequence will writeback owner
-            // equivalent to: (transfer_flag | uc_inv_owner)
-            pe_sharers_n = ((gad_cef_lo | gad_cmf_lo | gad_cof_lo | gad_cff_lo)
-                            & ((~gad_uf_lo & ~mshr_r.flags.uncached) | mshr_r.flags.uncached)
-                           )
-                           ? pe_sharers_n & ~owner_lce_id_one_hot
-                           : pe_sharers_n;
-            cnt_rst = 1'b1;
-
-            state_n = e_inv_cmd;
-          end
-          else begin
-            state_n = e_prog_sync;
-          end
+          state_n = e_ris_select;
 
         end // process GAD output
       end // e_wait_dir_gad
+
+      // after processing directory, choose next coherence action
+      e_ris_select: begin
+        // unconditionally perform setup for sending invalidations
+        // if invalidations are not needed then the FSM simply won't use this
+
+        // don't invalidate the requesting LCE
+        pe_sharers_n = sharers_hits_r & ~req_lce_id_one_hot;
+        // if doing a transfer or uncached req and owner exists, also remove owner LCE since
+        // transfer routine will take care of setting owner into correct new state
+        // and uncached sequence will writeback owner
+        pe_sharers_n = (transfer_flag | uc_inv_owner)
+                       ? pe_sharers_n & ~owner_lce_id_one_hot
+                       : pe_sharers_n;
+        // reset counter for invalidation command/ack tracking
+        cnt_rst = 1'b1;
+
+        // choose next state - replacement, invalidations, or sync with programmable pipe
+        // replace (invalidate existing block) in LCE if:
+        // 1. cacheable req, not an upgrade, and LRU block may be dirty (E, M, or O)
+        // 2. uncacheable req and target block in any state in requesting LCE
+        // invalidate if:
+        // 1. cacheable write request and any block in S
+        // 2. cacheable write that is upgrade and owner in O or F
+        // 3. uncacheable request and any block in S
+        state_n = (mshr_r.flags.replacement)
+                  ? e_replacement
+                  : (invalidate_flag)
+                    ? e_inv_cmd
+                    : e_prog_sync;
+      end // e_ris_select
 
       e_replacement: begin
         lce_cmd_header_v_o = 1'b1;
@@ -890,59 +889,46 @@ module bp_cce_hybrid_coh_pipe
                     ? e_inv_cmd
                     : e_prog_sync
                   : state_r;
-        // setup required state for sending invalidations
-        if (invalidate_flag) begin
-          // don't invalidate the requesting LCE
-          pe_sharers_n = sharers_hits_r & ~req_lce_id_one_hot;
-          // if doing a transfer or uncached req and owner exists, also remove owner LCE since
-          // transfer routine will take care of setting owner into correct new state
-          pe_sharers_n = (transfer_flag | uc_inv_owner)
-                         ? pe_sharers_n & ~owner_lce_id_one_hot
-                         : pe_sharers_n;
-          cnt_rst = 1'b1;
-        end
       end // e_replacement_wb_resp
 
       e_inv_cmd: begin
 
         // only send invalidation if priority encode has valid output
         // this indicates the sharers vector has a valid bit set
-        if (pe_v) begin
-          lce_cmd_header_v_o = 1'b1;
-          lce_cmd_has_data_o = 1'b0;
-          lce_cmd_header_cast_o.msg_type.cmd = e_bedrock_cmd_inv;
-          lce_cmd_header_cast_o.addr = paddr_aligned;
+        lce_cmd_header_v_o = pe_v;
+        lce_cmd_has_data_o = 1'b0;
+        lce_cmd_header_cast_o.msg_type.cmd = e_bedrock_cmd_inv;
+        lce_cmd_header_cast_o.addr = paddr_aligned;
 
-          // destination and way come from sharers information
-          lce_cmd_header_cast_o.payload.dst_id[0+:lg_num_lce_lp] = pe_lce_id;
-          lce_cmd_header_cast_o.payload.way_id = sharers_ways_r[pe_lce_id];
+        // destination and way come from sharers information
+        lce_cmd_header_cast_o.payload.dst_id[0+:lg_num_lce_lp] = pe_lce_id;
+        lce_cmd_header_cast_o.payload.way_id = sharers_ways_r[pe_lce_id];
 
-          // message sent, increment count
-          cnt_inc = lce_cmd_header_v_o & lce_cmd_header_ready_and_i;
-          // write directory - idempotent
-          dir_w_v = lce_cmd_header_v_o;
-          dir_cmd = e_wds_op;
-          dir_addr_li = paddr_aligned;
-          dir_lce_li = '0;
-          dir_lce_li[0+:lg_num_lce_lp] = pe_lce_id;
-          dir_way_li = sharers_ways_r[pe_lce_id];
-          dir_coh_state_li = e_COH_I;
+        // message sent, increment count
+        cnt_inc = lce_cmd_header_v_o & lce_cmd_header_ready_and_i;
+        // write directory - idempotent
+        dir_w_v = lce_cmd_header_v_o;
+        dir_cmd = e_wds_op;
+        dir_addr_li = paddr_aligned;
+        dir_lce_li = '0;
+        dir_lce_li[0+:lg_num_lce_lp] = pe_lce_id;
+        dir_way_li = sharers_ways_r[pe_lce_id];
+        dir_coh_state_li = e_COH_I;
 
-          // update sharers hit vector to feed back to priority encode module
-          pe_sharers_n = (lce_cmd_header_v_o & lce_cmd_header_ready_and_i)
-                         ? pe_sharers_r & ~pe_lce_id_one_hot
-                         : pe_sharers_r;
+        // update sharers hit vector to feed back to priority encode module
+        // only update if invalidation actually sends
+        pe_sharers_n = (lce_cmd_header_v_o & lce_cmd_header_ready_and_i)
+                       ? pe_sharers_r & ~pe_lce_id_one_hot
+                       : pe_sharers_r;
 
-          // move to response state if none of the sharer bits are set, indicating
-          // that the last command is sending this cycle
-          if (pe_sharers_n == '0) begin
-            state_n = e_inv_ack;
-          end
-        end // pe_v
-        else begin
-          state_n = e_error;
-          $display("e_inv_cmd going to e_error");
-        end
+        // move to inv_ack state if sharer vector will be empty next cycle, indicating
+        // that the last command is sending this cycle, otherwise send more invalidations.
+        // if pe_v is not set, go to e_error because sharers list is empty
+        state_n = (pe_v)
+                  ? (pe_sharers_n == '0)
+                    ? e_inv_ack
+                    : state_r
+                  : e_error;
 
         // decrement counter if invalidate ack arrives
         cnt_dec = inv_yumi_i;
@@ -1307,5 +1293,14 @@ module bp_cce_hybrid_coh_pipe
       pe_sharers_r <= pe_sharers_n;
     end
   end
+
+  //synopsys translate_off
+  always_ff @(negedge clk_i) begin
+    if (~reset_i) begin
+      assert(state_n != e_error) else
+        $display("Error!: moving to e_error from %0s", state_r.name());
+    end
+  end
+  //synopsys translate_on
 
 endmodule
