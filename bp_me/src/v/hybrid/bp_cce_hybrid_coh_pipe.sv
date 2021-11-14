@@ -198,7 +198,7 @@ module bp_cce_hybrid_coh_pipe
   // Header Buffer
   logic lce_req_header_v_li, lce_req_header_yumi_lo, lce_req_has_data_li;
   bp_bedrock_lce_req_header_s  lce_req_header_li;
-  logic buf_lce_req_header_v_li, buf_lce_req_ready_and_lo;
+  logic buf_lce_req_header_v_li, buf_lce_req_header_ready_and_lo;
   bsg_fifo_1r1w_small
     #(.width_p(lce_req_header_width_lp+1)
       ,.els_p(header_fifo_els_p)
