@@ -17,6 +17,9 @@ module bp_cce_hybrid
   #(parameter bp_params_e bp_params_p = e_bp_default_cfg
     `declare_bp_proc_params(bp_params_p)
 
+    // TODO: move into aviary?
+    , parameter prog_pipe_en_p             = 1
+
     , parameter lce_data_width_p           = dword_width_gp
     , parameter mem_data_width_p           = dword_width_gp
     , parameter req_header_fifo_els_p      = 2
@@ -351,6 +354,7 @@ module bp_cce_hybrid
       ,.lce_resp_pending_clear_i(lce_resp_pending_clear)
       );
 
+  if (prog_pipe_en_p) begin
   // Programmable pipe
   logic prog_pipe_empty;
   bp_cce_hybrid_prog_pipe
@@ -374,6 +378,12 @@ module bp_cce_hybrid
       ,.prog_yumi_i(prog_yumi_li)
       ,.prog_status_o(prog_status_lo)
       );
+  end else begin
+    wire prop_pipe_empty = 1'b1;
+    assign prog_status_lo = 1'b1;
+    assign prog_v_lo = 1'b1;
+    assign unused = prog_yumi_li;
+  end
 
   // Memory Response pipe
   `bp_cast_i(bp_bedrock_cce_mem_header_s, mem_resp_header);
