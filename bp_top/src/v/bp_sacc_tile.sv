@@ -88,13 +88,13 @@ module bp_sacc_tile
      ,.io_resp_header_o(lce_io_resp_header_lo)
      ,.io_resp_data_o(lce_io_resp_data_lo)
      ,.io_resp_v_o(lce_io_resp_v_lo)
-     ,.io_resp_ready_then_i(lce_io_resp_ready_and_li)
+     ,.io_resp_ready_and_i(lce_io_resp_ready_and_li)
      ,.io_resp_last_o()
 
      ,.lce_req_header_o(lce_lce_req_header_lo)
      ,.lce_req_data_o(lce_lce_req_data_lo)
      ,.lce_req_v_o(lce_lce_req_v_lo)
-     ,.lce_req_ready_then_i(lce_req_ready_and_li)
+     ,.lce_req_ready_and_i(lce_req_ready_and_li)
 
      ,.lce_cmd_header_i(lce_lce_cmd_header_li)
      ,.lce_cmd_data_i(lce_lce_cmd_data_li)

@@ -23,12 +23,12 @@ module bp_cacc_vdp
     , output logic [lce_req_header_width_lp-1:0]  lce_req_header_o
     , output logic [cce_block_width_p-1:0]        lce_req_data_o
     , output                                      lce_req_v_o
-    , input                                       lce_req_ready_i
+    , input                                       lce_req_ready_and_i
 
     , output logic [lce_resp_header_width_lp-1:0] lce_resp_header_o
     , output logic [cce_block_width_p-1:0]        lce_resp_data_o
     , output logic                                lce_resp_v_o
-    , input                                       lce_resp_ready_i
+    , input                                       lce_resp_ready_and_i
 
     , input [lce_cmd_header_width_lp-1:0]         lce_cmd_header_i
     , input [cce_block_width_p-1:0]               lce_cmd_data_i
@@ -38,12 +38,12 @@ module bp_cacc_vdp
     , output logic [lce_cmd_header_width_lp-1:0]  lce_cmd_header_o
     , output logic [cce_block_width_p-1:0]        lce_cmd_data_o
     , output logic                                lce_cmd_v_o
-    , input                                       lce_cmd_ready_i
+    , input                                       lce_cmd_ready_and_i
 
     , input [mem_header_width_lp-1:0]             io_cmd_header_i
     , input [cce_block_width_p-1:0]               io_cmd_data_i
     , input                                       io_cmd_v_i
-    , output logic                                io_cmd_ready_o
+    , output logic                                io_cmd_ready_and_o
 
     , output logic [mem_header_width_lp-1:0]      io_resp_header_o
     , output logic [cce_block_width_p-1:0]        io_resp_data_o
@@ -118,7 +118,7 @@ module bp_cacc_vdp
 
      ,.dcache_pkt_i(dcache_pkt)
      ,.v_i(dcache_pkt_v)
-     ,.ready_o(dcache_ready)
+     ,.ready_and_o(dcache_ready)
 
      ,.early_hit_v_o(dcache_v)
      ,.early_miss_v_o()
@@ -217,12 +217,12 @@ module bp_cacc_vdp
      ,.lce_req_header_o(lce_req_header_o)
      ,.lce_req_data_o(lce_req_data_o)
      ,.lce_req_v_o(lce_req_v_o)
-     ,.lce_req_ready_then_i(lce_req_ready_i)
+     ,.lce_req_ready_and_i(lce_req_ready_and_i)
   
      ,.lce_resp_header_o(lce_resp_header_o)
      ,.lce_resp_data_o(lce_resp_data_o)
      ,.lce_resp_v_o(lce_resp_v_o)
-     ,.lce_resp_ready_then_i(lce_resp_ready_i)
+     ,.lce_resp_ready_and_i(lce_resp_ready_and_i)
   
      ,.lce_cmd_header_i(lce_cmd_header_i)
      ,.lce_cmd_data_i(lce_cmd_data_i)
@@ -232,7 +232,7 @@ module bp_cacc_vdp
      ,.lce_cmd_header_o(lce_cmd_header_o)
      ,.lce_cmd_data_o(lce_cmd_data_o)
      ,.lce_cmd_v_o(lce_cmd_v_o)
-     ,.lce_cmd_ready_then_i(lce_cmd_ready_i)
+     ,.lce_cmd_ready_and_i(lce_cmd_ready_and_i)
      );
 
   // CCE-IO interface is used for uncached requests-read/write memory mapped CSR
@@ -240,7 +240,7 @@ module bp_cacc_vdp
   `bp_cast_i(bp_bedrock_mem_header_s, io_cmd_header);
   `bp_cast_o(bp_bedrock_mem_header_s, io_resp_header);
 
-  assign io_cmd_ready_o = 1'b1;
+  assign io_cmd_ready_and_o = 1'b1;
 
   logic [63:0] csr_data, start_cmd, input_a_ptr, input_b_ptr, input_len,
                res_status, res_ptr, res_len, operation, dot_product_res;

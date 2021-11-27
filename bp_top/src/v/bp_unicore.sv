@@ -146,7 +146,7 @@ module bp_unicore
 
      ,.cache_pkt_o(cache_pkt_li)
      ,.cache_pkt_v_o(cache_pkt_v_li)
-     ,.cache_pkt_ready_i(cache_pkt_ready_lo)
+     ,.cache_pkt_ready_and_i(cache_pkt_ready_lo)
 
      ,.cache_data_i(cache_data_lo)
      ,.cache_v_i(cache_data_v_lo)

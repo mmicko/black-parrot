@@ -15,7 +15,6 @@ module bp_uce
   import bp_common_pkg::*;
   import bp_me_pkg::*;
   #(parameter bp_params_e bp_params_p = e_bp_default_cfg
-    , parameter `BSG_INV_PARAM(mem_data_width_p)
     `declare_bp_proc_params(bp_params_p)
     `declare_bp_bedrock_mem_if_widths(paddr_width_p, did_width_p, lce_id_width_p, lce_assoc_p)
     , parameter `BSG_INV_PARAM(assoc_p)
@@ -39,7 +38,7 @@ module bp_uce
 
     , input [cache_req_width_lp-1:0]                 cache_req_i
     , input                                          cache_req_v_i
-    , output logic                                   cache_req_yumi_o
+    , output logic                                   cache_req_ready_and_o
     , output logic                                   cache_req_busy_o
     , input [cache_req_metadata_width_lp-1:0]        cache_req_metadata_i
     , input                                          cache_req_metadata_v_i
@@ -65,13 +64,13 @@ module bp_uce
     , input [cache_stat_info_width_lp-1:0]           stat_mem_i
 
     , output logic [mem_header_width_lp-1:0]         mem_cmd_header_o
-    , output logic [mem_data_width_p-1:0]            mem_cmd_data_o
+    , output logic [fill_width_p-1:0]                mem_cmd_data_o
     , output logic                                   mem_cmd_v_o
     , input                                          mem_cmd_ready_and_i
     , output logic                                   mem_cmd_last_o
 
     , input [mem_header_width_lp-1:0]                mem_resp_header_i
-    , input [mem_data_width_p-1:0]                   mem_resp_data_i
+    , input [fill_width_p-1:0]                       mem_resp_data_i
     , input                                          mem_resp_v_i
     , output logic                                   mem_resp_ready_and_o
     , input                                          mem_resp_last_i
@@ -156,7 +155,7 @@ module bp_uce
     (.clk_i(clk_i)
      ,.reset_i(reset_i)
 
-     ,.set_i(cache_req_yumi_o)
+     ,.set_i(cache_req_ready_and_o & cache_req_v_i)
      ,.clear_i(cache_req_done)
      ,.data_o(cache_req_v_r)
      );
@@ -168,7 +167,7 @@ module bp_uce
    cache_req_yumi_extend
     (.clk_i(clk_i)
      ,.reset_i(reset_i)
-     ,.data_i(cache_req_yumi_o)
+     ,.data_i(cache_req_ready_and_o & cache_req_v_i)
      ,.data_o(cache_req_yumi_r)
      );
 
@@ -195,7 +194,7 @@ module bp_uce
      ,.reset_i(reset_i)
 
      ,.set_i(cache_req_metadata_v_i)
-     ,.clear_i(cache_req_yumi_o)
+     ,.clear_i(cache_req_ready_and_o & cache_req_v_i)
      ,.data_o(cache_req_metadata_v_r)
      );
 
@@ -476,7 +475,7 @@ module bp_uce
   assign cache_req_busy_o = is_reset | is_clear | cache_req_credits_full_o;
   always_comb
     begin
-      cache_req_yumi_o = '0;
+      cache_req_ready_and_o = '0;
 
       index_up = '0;
       way_up   = '0;
@@ -608,9 +607,9 @@ module bp_uce
               end
 
             // We can accept a new request as long as we send out an old one this cycle
-            cache_req_yumi_o = cache_req_v_i & (~cache_req_v_r | cache_req_done);
+            cache_req_ready_and_o = (~cache_req_v_r | cache_req_done);
 
-            state_n = cache_req_yumi_o
+            state_n = (cache_req_ready_and_o & cache_req_v_i)
                       ? flush_v_li
                         ? e_flush_read
                         : clear_v_li

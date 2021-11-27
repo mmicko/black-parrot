@@ -55,36 +55,54 @@ module bp_me_stream_to_burst
    );
 
   `declare_bp_bedrock_if(paddr_width_p, payload_width_p, lce_id_width_p, lce_assoc_p, bp);
-
-  bp_bedrock_bp_header_s in_msg_header_li;
-  assign in_msg_header_li = in_msg_header_i;
+  `bp_cast_i(bp_bedrock_bp_header_s, in_msg_header);
 
   // has_data is raised when input stream message has one or more beats of data. It is valid
   // only on the first beat of the input message.
-  wire has_data = payload_mask_p[in_msg_header_li.msg_type];
+  // TODO: Buffer the first data flit unconditionally
+  wire has_data = payload_mask_p[in_msg_header_cast_i.msg_type];
 
   // streaming register is set while sending output data beats.
   // It is set when header of a data-carrying message sends and cleared when last data
   // beat is consumed by output client.
   logic streaming_r;
   bsg_dff_reset_set_clear
-    #(.width_p(1)
-      ,.clear_over_set_p(1)
-      )
-    streaming_reg
+   #(.width_p(1), .clear_over_set_p(1))
+   streaming_reg
     (.clk_i(clk_i)
      ,.reset_i(reset_i)
-     ,.set_i(out_msg_header_v_o & out_msg_header_ready_and_i & has_data)
-     ,.clear_i(out_msg_data_v_o & out_msg_data_ready_and_i & out_msg_last_o)
+     ,.set_i(out_msg_header_ready_and_i & out_msg_header_v_o & has_data)
+     ,.clear_i(out_msg_data_ready_and_i & out_msg_data_v_o & out_msg_last_o)
      ,.data_o(streaming_r)
      );
 
+  logic behind_r;
+  bsg_dff_reset_set_clear
+   #(.width_p(1), .clear_over_set_p(1))
+   behind_reg
+    (.clk_i(clk_i)
+     ,.reset_i(reset_i)
+     ,.set_i(out_msg_header_ready_and_i & out_msg_header_v_o & out_msg_has_data_o)
+     ,.clear_i(out_msg_data_ready_and_i & out_msg_data_v_o)
+     ,.data_o(behind_r)
+     );
+
+  logic [data_width_p-1:0] data_r;
+  bsg_dff_en
+   #(.width_p(data_width_p))
+   data_reg
+    (.clk_i(clk_i)
+     ,.en_i(in_msg_v_i & in_msg_ready_and_o)
+     ,.data_i(in_msg_data_i)
+     ,.data_o(data_r)
+     );
+
   // header passthrough
-  assign out_msg_header_o = in_msg_header_li;
+  assign out_msg_header_o = in_msg_header_cast_i;
   assign out_msg_header_v_o = in_msg_v_i & ~streaming_r;
   assign out_msg_has_data_o = has_data;
 
-  assign out_msg_data_o = in_msg_data_i;
+  assign out_msg_data_o = behind_r ? data_r : in_msg_data_i;
   assign out_msg_data_v_o = in_msg_v_i & streaming_r;
   assign out_msg_last_o = in_msg_last_i;
 
@@ -92,10 +110,8 @@ module bp_me_stream_to_burst
   // Input messages with data send the output header without acking the input beat and then ack
   // the N input beats when sending the N output data beats.
   assign in_msg_ready_and_o = streaming_r
-                              ? out_msg_data_ready_and_i
-                              : ~has_data
-                                ? out_msg_header_ready_and_i
-                                : '0;
+                              ? out_msg_data_ready_and_i & ~behind_r
+                              : out_msg_header_ready_and_i;
 
 endmodule
 

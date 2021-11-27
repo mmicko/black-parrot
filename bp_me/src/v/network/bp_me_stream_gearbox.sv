@@ -21,8 +21,8 @@ module bp_me_stream_gearbox
    , parameter `BSG_INV_PARAM(out_data_width_p)
    , parameter `BSG_INV_PARAM(payload_width_p)
 
-   `declare_bp_bedrock_if_widths(paddr_width_p, payload_width_p, in_data_width_p, in)
-   `declare_bp_bedrock_if_widths(paddr_width_p, payload_width_p, in_data_width_p, out)
+   `declare_bp_bedrock_if_widths(paddr_width_p, payload_width_p, in)
+   `declare_bp_bedrock_if_widths(paddr_width_p, payload_width_p, out)
    )
   (input                                            clk_i
    , input                                          reset_i
@@ -35,15 +35,15 @@ module bp_me_stream_gearbox
    , input                                          msg_last_i
 
    // Output BedRock Stream
-   , input [out_header_width_lp-1:0]                msg_header_o
+   , output logic [out_header_width_lp-1:0]         msg_header_o
    , output logic [out_data_width_p-1:0]            msg_data_o
    , output logic                                   msg_v_o
    , input                                          msg_ready_and_i
    , output logic                                   msg_last_o
    );
 
-  `declare_bp_bedrock_if(paddr_width_p, payload_width_p, in_data_width_p, lce_id_width_p, lce_assoc_p, in);
-  `declare_bp_bedrock_if(paddr_width_p, payload_width_p, out_data_width_p, lce_id_width_p, lce_assoc_p, out);
+  `declare_bp_bedrock_if(paddr_width_p, payload_width_p, lce_id_width_p, lce_assoc_p, in);
+  `declare_bp_bedrock_if(paddr_width_p, payload_width_p, lce_id_width_p, lce_assoc_p, out);
   `bp_cast_i(bp_bedrock_in_header_s, msg_header);
   `bp_cast_o(bp_bedrock_out_header_s, msg_header);
 
@@ -92,13 +92,13 @@ module bp_me_stream_gearbox
 
   logic [cnt_width_lp-1:0] cnt;
   bsg_counter_clear_up
-   #(.max_val_p(out_words_lp), .init_val_p('0))
+   #(.max_val_p(out_words_lp-1), .init_val_p('0))
    counter
     (.clk_i(clk_i)
      ,.reset_i(reset_i)
 
      ,.clear_i(msg_v_o & msg_ready_and_i & msg_last_o)
-     ,.up_i(msg_v_o & msg_ready_i & ~msg_last_o)
+     ,.up_i(msg_v_o & msg_ready_and_i & ~msg_last_o)
      ,.count_o(cnt)
      );
   wire [cnt_width_lp-1:0] wrap = cnt + msg_header_cast_i.addr[offset_width_lp+:cnt_width_lp];

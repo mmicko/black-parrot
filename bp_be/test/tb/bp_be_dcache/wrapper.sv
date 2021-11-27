@@ -33,8 +33,8 @@ module wrapper
 
    , localparam dcache_pkt_width_lp = `bp_be_dcache_pkt_width(vaddr_width_p)
 
-   , localparam lce_cce_req_packet_width_lp = `bsg_wormhole_concentrator_packet_width(coh_noc_cord_width_p, coh_noc_len_width_p, coh_noc_cid_width_p, lce_req_header_width_lp+cce_block_width_p)
-   , localparam lce_cce_req_packet_hdr_width_lp = (lce_cce_req_packet_width_lp-cce_block_width_p)
+   , localparam lce_cce_req_packet_width_lp =
+`bsg_wormhole_concentrator_packet_width(coh_noc_cord_width_p, coh_noc_len_width_p, coh_noc_cid_width_p, lce_req_header_width_lp)
    )
    ( input                                             clk_i
    , input                                             reset_i
@@ -327,12 +327,12 @@ module wrapper
               ,.lce_req_header_o(lce_req_header_lo[i])
               ,.lce_req_data_o(lce_req_data_lo[i])
               ,.lce_req_v_o(lce_req_v_lo[i])
-              ,.lce_req_ready_then_i(lce_req_ready_and_li[i])
+              ,.lce_req_ready_and_i(lce_req_ready_and_li[i])
 
               ,.lce_resp_header_o(lce_resp_header_lo[i])
               ,.lce_resp_data_o(lce_resp_data_lo[i])
               ,.lce_resp_v_o(lce_resp_v_lo[i])
-              ,.lce_resp_ready_then_i(lce_resp_ready_and_li[i])
+              ,.lce_resp_ready_and_i(lce_resp_ready_and_li[i])
 
               ,.lce_cmd_header_i(lce_cmd_header_li[i])
               ,.lce_cmd_data_i(lce_cmd_data_li[i])
@@ -342,7 +342,7 @@ module wrapper
               ,.lce_cmd_header_o(lce_cmd_header_lo[i])
               ,.lce_cmd_data_o(lce_cmd_data_lo[i])
               ,.lce_cmd_v_o(lce_cmd_v_lo[i])
-              ,.lce_cmd_ready_then_i(lce_cmd_ready_and_li[i])
+              ,.lce_cmd_ready_and_i(lce_cmd_ready_and_li[i])
               );
 
            // Request out

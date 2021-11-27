@@ -79,16 +79,16 @@ module bp_tile
   // Core-side LCE-CCE network connections
   bp_bedrock_lce_req_header_s [1:0] lce_req_header_lo;
   logic [1:0][cce_block_width_p-1:0] lce_req_data_lo;
-  logic [1:0] lce_req_v_lo, lce_req_ready_li;
+  logic [1:0] lce_req_v_lo, lce_req_ready_and_li;
   bp_bedrock_lce_resp_header_s [1:0] lce_resp_header_lo;
   logic [1:0][cce_block_width_p-1:0] lce_resp_data_lo;
-  logic [1:0] lce_resp_v_lo, lce_resp_ready_li;
+  logic [1:0] lce_resp_v_lo, lce_resp_ready_and_li;
   bp_bedrock_lce_cmd_header_s [1:0] lce_cmd_header_li;
   logic [1:0][cce_block_width_p-1:0] lce_cmd_data_li;
   logic [1:0] lce_cmd_v_li, lce_cmd_yumi_lo;
   bp_bedrock_lce_cmd_header_s [1:0] lce_cmd_header_lo;
   logic [1:0][cce_block_width_p-1:0] lce_cmd_data_lo;
-  logic [1:0] lce_cmd_v_lo, lce_cmd_ready_li;
+  logic [1:0] lce_cmd_v_lo, lce_cmd_ready_and_li;
 
   // CCE-side LCE-CCE network connections
   logic cce_lce_req_header_v, cce_lce_req_header_ready_and;
@@ -160,7 +160,7 @@ module bp_tile
 
          ,.packet_i(lce_req_packet_lo[i])
          ,.v_i(lce_req_v_lo[i])
-         ,.ready_o(lce_req_ready_li[i])
+         ,.ready_o(lce_req_ready_and_li[i])
 
          ,.link_i(lce_req_link_li[i])
          ,.link_o(lce_req_link_lo[i])
@@ -186,7 +186,7 @@ module bp_tile
 
          ,.packet_i(lce_cmd_packet_lo[i])
          ,.v_i(lce_cmd_v_lo[i])
-         ,.ready_o(lce_cmd_ready_li[i])
+         ,.ready_o(lce_cmd_ready_and_li[i])
 
          ,.link_i(lce_cmd_link_li[i])
          ,.link_o(lce_cmd_link_lo[i])
@@ -218,7 +218,7 @@ module bp_tile
 
          ,.packet_i(lce_resp_packet_lo[i])
          ,.v_i(lce_resp_v_lo[i])
-         ,.ready_o(lce_resp_ready_li[i])
+         ,.ready_o(lce_resp_ready_and_li[i])
 
          ,.link_i(lce_resp_link_li[i])
          ,.link_o(lce_resp_link_lo[i])
@@ -427,7 +427,7 @@ module bp_tile
      ,.lce_req_header_o(lce_req_header_lo)
      ,.lce_req_data_o(lce_req_data_lo)
      ,.lce_req_v_o(lce_req_v_lo)
-     ,.lce_req_ready_then_i(lce_req_ready_li)
+     ,.lce_req_ready_and_i(lce_req_ready_and_li)
 
      ,.lce_cmd_header_i(lce_cmd_header_li)
      ,.lce_cmd_data_i(lce_cmd_data_li)
@@ -437,12 +437,12 @@ module bp_tile
      ,.lce_cmd_header_o(lce_cmd_header_lo)
      ,.lce_cmd_data_o(lce_cmd_data_lo)
      ,.lce_cmd_v_o(lce_cmd_v_lo)
-     ,.lce_cmd_ready_then_i(lce_cmd_ready_li)
+     ,.lce_cmd_ready_and_i(lce_cmd_ready_and_li)
 
      ,.lce_resp_header_o(lce_resp_header_lo)
      ,.lce_resp_data_o(lce_resp_data_lo)
      ,.lce_resp_v_o(lce_resp_v_lo)
-     ,.lce_resp_ready_then_i(lce_resp_ready_li)
+     ,.lce_resp_ready_and_i(lce_resp_ready_and_li)
 
      ,.timer_irq_i(timer_irq_li)
      ,.software_irq_i(software_irq_li)
@@ -684,7 +684,7 @@ module bp_tile
   // CCE-Mem network to L2 Cache adapter
   `declare_bsg_cache_pkt_s(daddr_width_p, l2_data_width_p);
   bsg_cache_pkt_s cache_pkt_li;
-  logic cache_pkt_v_li, cache_pkt_ready_lo;
+  logic cache_pkt_v_li, cache_pkt_ready_and_lo;
   logic [l2_data_width_p-1:0] cache_data_lo;
   logic cache_data_v_lo, cache_data_yumi_li;
   bp_me_cce_to_cache
@@ -707,7 +707,7 @@ module bp_tile
 
      ,.cache_pkt_o(cache_pkt_li)
      ,.cache_pkt_v_o(cache_pkt_v_li)
-     ,.cache_pkt_ready_i(cache_pkt_ready_lo)
+     ,.cache_pkt_ready_and_i(cache_pkt_ready_and_lo)
 
      ,.cache_data_i(cache_data_lo)
      ,.cache_v_i(cache_data_v_lo)
@@ -746,7 +746,7 @@ module bp_tile
 
      ,.cache_pkt_i(cache_pkt_li)
      ,.v_i(cache_pkt_v_li)
-     ,.ready_o(cache_pkt_ready_lo)
+     ,.ready_o(cache_pkt_ready_and_lo)
 
      ,.data_o(cache_data_lo)
      ,.v_o(cache_data_v_lo)

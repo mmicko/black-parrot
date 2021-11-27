@@ -18,6 +18,10 @@ $BASEJUMP_STL_DIR/bsg_test/bsg_trace_replay.v
 $BP_ME_DIR/src/v/dev/bp_me_cce_to_cache.sv
 $BP_ME_DIR/src/v/dev/bp_me_dram_hash_decode.sv
 $BP_ME_DIR/src/v/dev/bp_me_dram_hash_encode.sv
+$BP_ME_DIR/src/v/network/bp_me_stream_to_burst.sv
+$BP_ME_DIR/src/v/network/bp_me_burst_to_stream.sv
+$BP_ME_DIR/src/v/network/bp_me_burst_gearbox.sv
+$BP_ME_DIR/src/v/network/bp_me_stream_gearbox.sv
 $BP_ME_DIR/test/common/bp_me_nonsynth_pkg.sv
 $BP_ME_DIR/test/common/bp_me_nonsynth_cce_tracer.sv
 $BP_ME_DIR/test/common/bp_me_nonsynth_cce_dir_tracer.sv
@@ -33,3 +37,5 @@ $BP_ME_DIR/test/common/bp_mem_nonsynth_tracer.sv
 $BP_ME_DIR/test/common/bp_cce_mmio_cfg_loader.sv
 $BP_TOP_DIR/test/common/bp_nonsynth_if_verif.sv
 $BASEJUMP_STL_DIR/bsg_mem/bsg_mem_dma.cpp
+$BP_COMMON_DIR/src/v/bsg_parallel_in_serial_out_passthrough.v
+$BP_COMMON_DIR/src/v/bsg_serial_in_parallel_out_passthrough.v

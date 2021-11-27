@@ -47,7 +47,7 @@ module bp_me_cce_to_cache
    // cache-side
    , output [bsg_cache_pkt_width_lp-1:0]      cache_pkt_o
    , output logic                             cache_pkt_v_o
-   , input                                    cache_pkt_ready_i
+   , input                                    cache_pkt_ready_and_i
 
    , input [l2_data_width_p-1:0]              cache_data_i
    , input                                    cache_v_i
@@ -349,7 +349,7 @@ module bp_me_cce_to_cache
                             , {l2_block_offset_width_lp{1'b0}}
                             };
 
-          tagst_sent_n = (cache_pkt_v_o & cache_pkt_ready_i)
+          tagst_sent_n = (cache_pkt_v_o & cache_pkt_ready_and_i)
             ? tagst_sent_r + 1
             : tagst_sent_r;
           tagst_received_n = cache_v_i
@@ -418,7 +418,7 @@ module bp_me_cce_to_cache
               end
             cache_pkt_v_o = mem_cmd_v_lo;
             // send ready_and signal back to pump_out
-            mem_cmd_yumi_li = cache_pkt_ready_i & cache_pkt_v_o;
+            mem_cmd_yumi_li = cache_pkt_ready_and_i & cache_pkt_v_o;
 
           end
         default: begin end

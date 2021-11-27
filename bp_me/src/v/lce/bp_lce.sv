@@ -57,7 +57,7 @@ module bp_lce
     // can arrive, as indicated by the metadata_v_i signal
     , input [cache_req_width_lp-1:0]                 cache_req_i
     , input                                          cache_req_v_i
-    , output logic                                   cache_req_yumi_o
+    , output logic                                   cache_req_ready_and_o
     , output logic                                   cache_req_busy_o
     , input [cache_req_metadata_width_lp-1:0]        cache_req_metadata_i
     , input                                          cache_req_metadata_v_i
@@ -91,13 +91,13 @@ module bp_lce
     , output logic [lce_req_header_width_lp-1:0]     lce_req_header_o
     , output logic [cce_block_width_p-1:0]           lce_req_data_o
     , output logic                                   lce_req_v_o
-    , input                                          lce_req_ready_then_i
+    , input                                          lce_req_ready_and_i
 
     // Resp: ready->valid
     , output logic [lce_resp_header_width_lp-1:0]    lce_resp_header_o
     , output logic [cce_block_width_p-1:0]           lce_resp_data_o
     , output logic                                   lce_resp_v_o
-    , input                                          lce_resp_ready_then_i
+    , input                                          lce_resp_ready_and_i
 
     // CCE-LCE interface
     // Cmd_i: valid->yumi
@@ -111,7 +111,7 @@ module bp_lce
     , output logic [lce_cmd_header_width_lp-1:0]     lce_cmd_header_o
     , output logic [cce_block_width_p-1:0]           lce_cmd_data_o
     , output logic                                   lce_cmd_v_o
-    , input                                          lce_cmd_ready_then_i
+    , input                                          lce_cmd_ready_and_i
   );
 
   // parameter checks
@@ -153,7 +153,7 @@ module bp_lce
       ,.cache_req_i(cache_req_i)
       // Gate the cache_req_v_i signal to prevent yumis when busy
       ,.cache_req_v_i(~cache_req_busy_o & cache_req_v_i)
-      ,.cache_req_yumi_o(cache_req_yumi_o)
+      ,.cache_req_ready_and_o(cache_req_ready_and_o)
       ,.cache_req_metadata_i(cache_req_metadata_i)
       ,.cache_req_metadata_v_i(cache_req_metadata_v_i)
       ,.cache_req_complete_i(cache_req_complete_o)
@@ -165,7 +165,7 @@ module bp_lce
       ,.lce_req_header_o(lce_req_header_o)
       ,.lce_req_data_o(lce_req_data_o)
       ,.lce_req_v_o(lce_req_v_o)
-      ,.lce_req_ready_then_i(lce_req_ready_then_i)
+      ,.lce_req_ready_and_i(lce_req_ready_and_i)
       );
 
   // LCE Command Module
@@ -217,12 +217,12 @@ module bp_lce
       ,.lce_resp_header_o(lce_resp_header_o)
       ,.lce_resp_data_o(lce_resp_data_o)
       ,.lce_resp_v_o(lce_resp_v_o)
-      ,.lce_resp_ready_then_i(lce_resp_ready_then_i)
+      ,.lce_resp_ready_and_i(lce_resp_ready_and_i)
 
       ,.lce_cmd_header_o(lce_cmd_header_o)
       ,.lce_cmd_data_o(lce_cmd_data_o)
       ,.lce_cmd_v_o(lce_cmd_v_o)
-      ,.lce_cmd_ready_then_i(lce_cmd_ready_then_i)
+      ,.lce_cmd_ready_and_i(lce_cmd_ready_and_i)
       );
 
 

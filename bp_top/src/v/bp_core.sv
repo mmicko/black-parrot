@@ -30,12 +30,12 @@ module bp_core
   , output logic [1:0][lce_req_header_width_lp-1:0]  lce_req_header_o
   , output logic [1:0][cce_block_width_p-1:0]        lce_req_data_o
   , output logic [1:0]                               lce_req_v_o
-  , input [1:0]                                      lce_req_ready_then_i
+  , input [1:0]                                      lce_req_ready_and_i
 
   , output logic [1:0][lce_resp_header_width_lp-1:0] lce_resp_header_o
   , output logic [1:0][cce_block_width_p-1:0]        lce_resp_data_o
   , output logic [1:0]                               lce_resp_v_o
-  , input [1:0]                                      lce_resp_ready_then_i
+  , input [1:0]                                      lce_resp_ready_and_i
 
   // CCE-LCE interface
   , input [1:0][lce_cmd_header_width_lp-1:0]         lce_cmd_header_i
@@ -46,7 +46,7 @@ module bp_core
   , output logic [1:0][lce_cmd_header_width_lp-1:0]  lce_cmd_header_o
   , output logic [1:0][cce_block_width_p-1:0]        lce_cmd_data_o
   , output logic [1:0]                               lce_cmd_v_o
-  , input [1:0]                                      lce_cmd_ready_then_i
+  , input [1:0]                                      lce_cmd_ready_and_i
 
   , input                                            timer_irq_i
   , input                                            software_irq_i
@@ -60,14 +60,14 @@ module bp_core
   `bp_cast_i(bp_cfg_bus_s, cfg_bus);
 
   bp_icache_req_s icache_req_lo;
-  logic icache_req_v_lo, icache_req_yumi_li, icache_req_busy_li;
+  logic icache_req_v_lo, icache_req_ready_and_li, icache_req_busy_li;
   bp_icache_req_metadata_s icache_req_metadata_lo;
   logic icache_req_metadata_v_lo;
   logic icache_req_critical_tag_li, icache_req_critical_data_li, icache_req_complete_li;
   logic icache_req_credits_full_li, icache_req_credits_empty_li;
 
   bp_dcache_req_s dcache_req_lo;
-  logic dcache_req_v_lo, dcache_req_yumi_li, dcache_req_busy_li;
+  logic dcache_req_v_lo, dcache_req_ready_and_li, dcache_req_busy_li;
   bp_dcache_req_metadata_s dcache_req_metadata_lo;
   logic dcache_req_metadata_v_lo;
   logic dcache_req_critical_tag_li, dcache_req_critical_data_li, dcache_req_complete_li;
@@ -112,7 +112,7 @@ module bp_core
 
      ,.icache_req_o(icache_req_lo)
      ,.icache_req_v_o(icache_req_v_lo)
-     ,.icache_req_yumi_i(icache_req_yumi_li)
+     ,.icache_req_ready_and_i(icache_req_ready_and_li)
      ,.icache_req_busy_i(icache_req_busy_li)
      ,.icache_req_metadata_o(icache_req_metadata_lo)
      ,.icache_req_metadata_v_o(icache_req_metadata_v_lo)
@@ -139,7 +139,7 @@ module bp_core
 
      ,.dcache_req_o(dcache_req_lo)
      ,.dcache_req_v_o(dcache_req_v_lo)
-     ,.dcache_req_yumi_i(dcache_req_yumi_li)
+     ,.dcache_req_ready_and_i(dcache_req_ready_and_li)
      ,.dcache_req_busy_i(dcache_req_busy_li)
      ,.dcache_req_metadata_o(dcache_req_metadata_lo)
      ,.dcache_req_metadata_v_o(dcache_req_metadata_v_lo)
@@ -189,7 +189,7 @@ module bp_core
 
      ,.cache_req_i(icache_req_lo)
      ,.cache_req_v_i(icache_req_v_lo)
-     ,.cache_req_yumi_o(icache_req_yumi_li)
+     ,.cache_req_ready_and_o(icache_req_ready_and_li)
      ,.cache_req_busy_o(icache_req_busy_li)
      ,.cache_req_metadata_i(icache_req_metadata_lo)
      ,.cache_req_metadata_v_i(icache_req_metadata_v_lo)
@@ -217,12 +217,12 @@ module bp_core
      ,.lce_req_header_o(lce_req_header_o[0])
      ,.lce_req_data_o(lce_req_data_o[0])
      ,.lce_req_v_o(lce_req_v_o[0])
-     ,.lce_req_ready_then_i(lce_req_ready_then_i[0])
+     ,.lce_req_ready_and_i(lce_req_ready_and_i[0])
 
      ,.lce_resp_header_o(lce_resp_header_o[0])
      ,.lce_resp_data_o(lce_resp_data_o[0])
      ,.lce_resp_v_o(lce_resp_v_o[0])
-     ,.lce_resp_ready_then_i(lce_resp_ready_then_i[0])
+     ,.lce_resp_ready_and_i(lce_resp_ready_and_i[0])
 
      ,.lce_cmd_header_i(lce_cmd_header_i[0])
      ,.lce_cmd_data_i(lce_cmd_data_i[0])
@@ -232,7 +232,7 @@ module bp_core
      ,.lce_cmd_header_o(lce_cmd_header_o[0])
      ,.lce_cmd_data_o(lce_cmd_data_o[0])
      ,.lce_cmd_v_o(lce_cmd_v_o[0])
-     ,.lce_cmd_ready_then_i(lce_cmd_ready_then_i[0])
+     ,.lce_cmd_ready_and_i(lce_cmd_ready_and_i[0])
      );
 
   bp_lce
@@ -257,7 +257,7 @@ module bp_core
 
      ,.cache_req_i(dcache_req_lo)
      ,.cache_req_v_i(dcache_req_v_lo)
-     ,.cache_req_yumi_o(dcache_req_yumi_li)
+     ,.cache_req_ready_and_o(dcache_req_ready_and_li)
      ,.cache_req_busy_o(dcache_req_busy_li)
      ,.cache_req_metadata_i(dcache_req_metadata_lo)
      ,.cache_req_metadata_v_i(dcache_req_metadata_v_lo)
@@ -285,12 +285,12 @@ module bp_core
      ,.lce_req_header_o(lce_req_header_o[1])
      ,.lce_req_data_o(lce_req_data_o[1])
      ,.lce_req_v_o(lce_req_v_o[1])
-     ,.lce_req_ready_then_i(lce_req_ready_then_i[1])
+     ,.lce_req_ready_and_i(lce_req_ready_and_i[1])
 
      ,.lce_resp_header_o(lce_resp_header_o[1])
      ,.lce_resp_data_o(lce_resp_data_o[1])
      ,.lce_resp_v_o(lce_resp_v_o[1])
-     ,.lce_resp_ready_then_i(lce_resp_ready_then_i[1])
+     ,.lce_resp_ready_and_i(lce_resp_ready_and_i[1])
 
      ,.lce_cmd_header_i(lce_cmd_header_i[1])
      ,.lce_cmd_data_i(lce_cmd_data_i[1])
@@ -300,7 +300,7 @@ module bp_core
      ,.lce_cmd_header_o(lce_cmd_header_o[1])
      ,.lce_cmd_data_o(lce_cmd_data_o[1])
      ,.lce_cmd_v_o(lce_cmd_v_o[1])
-     ,.lce_cmd_ready_then_i(lce_cmd_ready_then_i[1])
+     ,.lce_cmd_ready_and_i(lce_cmd_ready_and_i[1])
      );
 
 endmodule
