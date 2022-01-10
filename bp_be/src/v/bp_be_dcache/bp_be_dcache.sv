@@ -169,7 +169,7 @@ module bp_be_dcache
    //   configurations which support that behavior
    , output logic [dcache_req_width_lp-1:0]          cache_req_o
    , output logic                                    cache_req_v_o
-   , input                                           cache_req_ready_and_i
+   , input                                           cache_req_yumi_i
    , input                                           cache_req_busy_i
    , output logic [dcache_req_metadata_width_lp-1:0] cache_req_metadata_o
    , output logic                                    cache_req_metadata_v_o
@@ -256,7 +256,7 @@ module bp_be_dcache
    #(.width_p(2), .i_know_this_is_a_bad_idea_p(1))
    negedge_extend
     (.clk_i(negedge_clk)
-     ,.data_i({stat_mem_pkt_yumi_lo, (cache_req_ready_and_o & cache_req_v_i)})
+     ,.data_i({stat_mem_pkt_yumi_lo, cache_req_yumi_i})
      ,.data_o({stat_mem_pkt_yumi_o, cache_req_yumi_li})
      );
 
@@ -964,7 +964,7 @@ module bp_be_dcache
 
   // Cache metadata is valid after the request goes out,
   //   but no metadata for flushes
-  wire cache_req_metadata_v = cache_req_ready_and_o & cache_req_v_i;
+  wire cache_req_metadata_v = cache_req_yumi_i;
   bsg_dff_reset
    #(.width_p(1))
    cache_req_v_reg

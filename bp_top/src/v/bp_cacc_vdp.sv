@@ -118,12 +118,13 @@ module bp_cacc_vdp
 
      ,.dcache_pkt_i(dcache_pkt)
      ,.v_i(dcache_pkt_v)
-     ,.ready_and_o(dcache_ready)
+     ,.ready_o(dcache_ready)
 
      ,.early_hit_v_o(dcache_v)
      ,.early_miss_v_o()
      ,.early_data_o(dcache_data)
      ,.early_fencei_o()
+     ,.early_fflags_o()
      ,.final_v_o()
      ,.final_data_o()
      ,.late_rd_addr_o()

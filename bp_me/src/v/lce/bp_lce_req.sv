@@ -75,7 +75,7 @@ module bp_lce_req
     // can arrive, as indicated by the metadata_v_i signal
     , input [cache_req_width_lp-1:0]                 cache_req_i
     , input                                          cache_req_v_i
-    , output logic                                   cache_req_ready_and_o
+    , output logic                                   cache_req_yumi_o
     , input [cache_req_metadata_width_lp-1:0]        cache_req_metadata_i
     , input                                          cache_req_metadata_v_i
 
@@ -125,7 +125,7 @@ module bp_lce_req
     (.clk_i(clk_i)
      ,.reset_i(reset_i)
 
-     ,.set_i(cache_req_ready_and_o & cache_req_v_i)
+     ,.set_i(cache_req_yumi_o)
      ,.clear_i(lce_req_v_o & lce_req_ready_and_i)
      ,.data_o(cache_req_v_r)
      );
@@ -136,7 +136,7 @@ module bp_lce_req
    #(.width_p($bits(bp_cache_req_s)))
    req_reg
     (.clk_i(req_clk)
-     ,.en_i(cache_req_ready_and_o & cache_req_v_i)
+     ,.en_i(cache_req_yumi_o)
      ,.data_i(cache_req_i)
      ,.data_o(cache_req_r)
      );
@@ -152,7 +152,7 @@ module bp_lce_req
      ,.reset_i(reset_i)
 
      ,.set_i(cache_req_metadata_v_i)
-     ,.clear_i(cache_req_ready_and_o & cache_req_v_i)
+     ,.clear_i(cache_req_yumi_o)
      ,.data_o(cache_req_metadata_v_r)
      );
 
@@ -170,7 +170,7 @@ module bp_lce_req
   // Outstanding request credit counter
   logic [`BSG_WIDTH(credits_p)-1:0] credit_count_lo;
   wire credit_v_li = cache_req_v_i;
-  wire credit_ready_li = cache_req_ready_and_o;
+  wire credit_ready_li = cache_req_yumi_o;
   wire credit_returned_li = cache_req_complete_i | uc_store_req_complete_i;
   bsg_flow_counter
     #(.els_p(credits_p))
@@ -196,7 +196,7 @@ module bp_lce_req
 
   //synopsys translate_off
   always_ff @(negedge clk_i) begin
-    if (~reset_i & cache_req_v_r & cache_req_ready_and_o & cache_req_v_i
+    if (~reset_i & cache_req_v_r & cache_req_yumi_o
                  & ~(lce_req_v_o & lce_req_ready_and_i)
        )
       $fatal("Cache request overwritten before sending");
@@ -207,7 +207,7 @@ module bp_lce_req
     state_n = state_r;
 
     ready_o = 1'b0;
-    cache_req_ready_and_o = 1'b0;
+    cache_req_yumi_o = 1'b0;
 
     lce_req_v_o = 1'b0;
 
@@ -238,10 +238,10 @@ module bp_lce_req
             lce_req_header_cast_o.msg_type.req = e_bedrock_req_uc_wr;
           end
 
-        cache_req_ready_and_o = ready_o & (~cache_req_v_r | lce_req_ready_and_i);
-        state_n = (cache_req_ready_and_o & cache_req_v_i & cache_req_cast_i.msg_type inside {e_miss_store, e_miss_load})
+        cache_req_yumi_o = ready_o & cache_req_v_i & (~cache_req_v_r | lce_req_ready_and_i);
+        state_n = (cache_req_yumi_o & cache_req_cast_i.msg_type inside {e_miss_store, e_miss_load})
           ? e_send_cached_req
-          : (cache_req_ready_and_o & cache_req_v_i & cache_req_cast_i.msg_type inside {e_uc_load})
+          : (cache_req_yumi_o & cache_req_cast_i.msg_type inside {e_uc_load})
             ? e_send_uncached_req
             : e_ready;
       end

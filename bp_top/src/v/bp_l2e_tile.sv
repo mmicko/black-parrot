@@ -434,7 +434,7 @@ module bp_l2e_tile
   // CCE-Mem network to L2 Cache adapter
   `declare_bsg_cache_pkt_s(daddr_width_p, l2_data_width_p);
   bsg_cache_pkt_s cache_pkt_li;
-  logic cache_pkt_v_li, cache_pkt_ready_lo;
+  logic cache_pkt_v_li, cache_pkt_ready_and_lo;
   logic [l2_data_width_p-1:0] cache_data_lo;
   logic cache_data_v_lo, cache_data_yumi_li;
   bp_me_cce_to_cache
@@ -457,7 +457,7 @@ module bp_l2e_tile
 
      ,.cache_pkt_o(cache_pkt_li)
      ,.cache_pkt_v_o(cache_pkt_v_li)
-     ,.cache_pkt_ready_i(cache_pkt_ready_lo)
+     ,.cache_pkt_ready_and_i(cache_pkt_ready_and_lo)
 
      ,.cache_data_i(cache_data_lo)
      ,.cache_v_i(cache_data_v_lo)
@@ -496,7 +496,7 @@ module bp_l2e_tile
 
      ,.cache_pkt_i(cache_pkt_li)
      ,.v_i(cache_pkt_v_li)
-     ,.ready_o(cache_pkt_ready_lo)
+     ,.ready_o(cache_pkt_ready_and_lo)
 
      ,.data_o(cache_data_lo)
      ,.v_o(cache_data_v_lo)

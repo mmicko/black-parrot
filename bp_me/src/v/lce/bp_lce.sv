@@ -57,7 +57,7 @@ module bp_lce
     // can arrive, as indicated by the metadata_v_i signal
     , input [cache_req_width_lp-1:0]                 cache_req_i
     , input                                          cache_req_v_i
-    , output logic                                   cache_req_ready_and_o
+    , output logic                                   cache_req_yumi_o
     , output logic                                   cache_req_busy_o
     , input [cache_req_metadata_width_lp-1:0]        cache_req_metadata_i
     , input                                          cache_req_metadata_v_i
@@ -153,7 +153,7 @@ module bp_lce
       ,.cache_req_i(cache_req_i)
       // Gate the cache_req_v_i signal to prevent yumis when busy
       ,.cache_req_v_i(~cache_req_busy_o & cache_req_v_i)
-      ,.cache_req_ready_and_o(cache_req_ready_and_o)
+      ,.cache_req_yumi_o(cache_req_yumi_o)
       ,.cache_req_metadata_i(cache_req_metadata_i)
       ,.cache_req_metadata_v_i(cache_req_metadata_v_i)
       ,.cache_req_complete_i(cache_req_complete_o)

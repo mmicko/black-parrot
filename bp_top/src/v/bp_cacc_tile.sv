@@ -65,13 +65,13 @@ module bp_cacc_tile
   logic lce_req_v_lo, lce_req_ready_li;
   bp_bedrock_lce_resp_header_s lce_resp_header_lo;
   logic [cce_block_width_p-1:0] lce_resp_data_lo;
-  logic lce_resp_v_lo, lce_resp_ready_li;
+  logic lce_resp_v_lo, lce_resp_ready_and_li;
   bp_bedrock_lce_cmd_header_s lce_cmd_header_li;
   logic [cce_block_width_p-1:0] lce_cmd_data_li;
   logic lce_cmd_v_li, lce_cmd_yumi_lo;
   bp_bedrock_lce_cmd_header_s lce_cmd_header_lo;
   logic [cce_block_width_p-1:0] lce_cmd_data_lo;
-  logic lce_cmd_v_lo, lce_cmd_ready_li;
+  logic lce_cmd_v_lo, lce_cmd_ready_and_li;
 
   logic reset_r;
   always_ff @(posedge clk_i)
@@ -192,7 +192,7 @@ module bp_cacc_tile
 
      ,.packet_i(lce_resp_packet_lo)
      ,.v_i(lce_resp_v_lo)
-     ,.ready_o(lce_resp_ready_li)
+     ,.ready_o(lce_resp_ready_and_li)
 
      ,.link_i(lce_resp_link_i)
      ,.link_o(lce_resp_link_o)
@@ -218,7 +218,7 @@ module bp_cacc_tile
 
      ,.packet_i(lce_cmd_packet_lo)
      ,.v_i(lce_cmd_v_lo)
-     ,.ready_o(lce_cmd_ready_li)
+     ,.ready_o(lce_cmd_ready_and_li)
 
      ,.link_i(lce_cmd_link_li)
      ,.link_o(lce_cmd_link_lo)
@@ -296,7 +296,7 @@ module bp_cacc_tile
          ,.io_cmd_header_i(cce_io_cmd_header_lo)
          ,.io_cmd_data_i(cce_io_cmd_data_lo)
          ,.io_cmd_v_i(cce_io_cmd_v_lo)
-         ,.io_cmd_ready_o(cce_io_cmd_ready_and_li)
+         ,.io_cmd_ready_and_o(cce_io_cmd_ready_and_li)
 
          ,.io_resp_header_o(cce_io_resp_header_li)
          ,.io_resp_data_o(cce_io_resp_data_li)
@@ -306,17 +306,17 @@ module bp_cacc_tile
          ,.lce_req_header_o(lce_req_header_lo)
          ,.lce_req_data_o(lce_req_data_lo)
          ,.lce_req_v_o(lce_req_v_lo)
-         ,.lce_req_ready_i(lce_req_ready_li)
+         ,.lce_req_ready_and_i(lce_req_ready_li)
 
          ,.lce_cmd_header_o(lce_cmd_header_lo)
          ,.lce_cmd_data_o(lce_cmd_data_lo)
          ,.lce_cmd_v_o(lce_cmd_v_lo)
-         ,.lce_cmd_ready_i(lce_cmd_ready_li)
+         ,.lce_cmd_ready_and_i(lce_cmd_ready_and_li)
 
          ,.lce_resp_header_o(lce_resp_header_lo)
          ,.lce_resp_data_o(lce_resp_data_lo)
          ,.lce_resp_v_o(lce_resp_v_lo)
-         ,.lce_resp_ready_i(lce_resp_ready_li)
+         ,.lce_resp_ready_and_i(lce_resp_ready_and_li)
 
          ,.lce_cmd_header_i(lce_cmd_header_li)
          ,.lce_cmd_data_i(lce_cmd_data_li)
