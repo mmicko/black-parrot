@@ -72,12 +72,15 @@ ifeq ($(UCODE_CFG), 1)
 	cp $< $@
 endif
 
-NBF_INPUTS ?= --ncpus=$(NCPUS)
+NBF_INPUTS  = --ncpus=$(NCPUS)
 ifeq ($(UCODE_CFG), 1)
 NBF_INPUTS += --ucode=cce_ucode.mem
 endif
 ifeq ($(PRELOAD_MEM_P), 0)
-NBF_INPUTS += --mem=prog.mem --skip_zeros
+NBF_INPUTS += --mem=prog.mem
+ifeq ($(SKIP_ZEROS_P), 1)
+NBF_INPUTS += --skip_zeros
+endif
 endif
 ifeq ($(NBF_CONFIG_P), 1)
 NBF_INPUTS += --config

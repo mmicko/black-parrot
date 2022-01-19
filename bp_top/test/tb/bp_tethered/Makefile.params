@@ -16,6 +16,7 @@ export COSIM_P        ?= 0
 export NBF_CONFIG_P   ?= 1
 
 export PRELOAD_MEM_P  ?= 0
+export SKIP_ZEROS_P   ?= 1
 
 export NO_BIND_P ?= 0
 
