@@ -128,7 +128,6 @@ module bp_nonsynth_nbf_loader
   always_comb
     begin
       io_cmd_data_o = '0;
-      io_cmd_data_o[0+:nbf_data_width_p] = curr_nbf.data;
       io_cmd = '0;
       io_cmd.payload.lce_id = lce_id_i;
       io_cmd.payload.did = did_i;
@@ -142,6 +141,15 @@ module bp_nonsynth_nbf_loader
         2'b10: io_cmd.size = e_bedrock_msg_size_4;
         2'b11: io_cmd.size = e_bedrock_msg_size_8;
         default: io_cmd.size = e_bedrock_msg_size_4;
+      endcase
+
+      // Hack, use bsg_bus_pack
+      case (curr_nbf.opcode[1:0])
+        2'b00: io_cmd_data_o = {8{curr_nbf.data[0+:8]}};
+        2'b01: io_cmd_data_o = {4{curr_nbf.data[0+:16]}};
+        2'b10: io_cmd_data_o = {2{curr_nbf.data[0+:32]}};
+        2'b11: io_cmd_data_o = {1{curr_nbf.data[0+:64]}};
+        default: io_cmd_data_o = {1{curr_nbf.data[0+:64]}}; 
       endcase
     end
 
