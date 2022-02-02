@@ -139,11 +139,11 @@ module bp_be_calculator_top
   logic [pipe_stage_els_lp-1:0][dpath_width_gp-1:0] forward_data;
   for (genvar i = 0; i < pipe_stage_els_lp; i++)
     begin : forward_match
-      assign match_rs[0][i] = (dispatch_pkt_cast_i.queue_v & ~dispatch_pkt_cast_i.rs1_fp_v & comp_stage_r[i].ird_w_v & (dispatch_pkt_cast_i.instr.t.fmatype.rs1_addr == comp_stage_r[i].rd_addr))
-                              || (dispatch_pkt_cast_i.queue_v & dispatch_pkt_cast_i.rs1_fp_v & comp_stage_r[i].frd_w_v & (dispatch_pkt_cast_i.instr.t.fmatype.rs1_addr == comp_stage_r[i].rd_addr));
-      assign match_rs[1][i] = (dispatch_pkt_cast_i.queue_v & ~dispatch_pkt_cast_i.rs2_fp_v & comp_stage_r[i].ird_w_v & (dispatch_pkt_cast_i.instr.t.fmatype.rs2_addr == comp_stage_r[i].rd_addr))
-                              || (dispatch_pkt_cast_i.queue_v & dispatch_pkt_cast_i.rs2_fp_v & comp_stage_r[i].frd_w_v & (dispatch_pkt_cast_i.instr.t.fmatype.rs2_addr == comp_stage_r[i].rd_addr));
-      assign match_rs[2][i] = (dispatch_pkt_cast_i.queue_v & dispatch_pkt_cast_i.rs3_fp_v & comp_stage_r[i].frd_w_v & (dispatch_pkt_cast_i.instr.t.fmatype.rs3_addr == comp_stage_r[i].rd_addr));
+      assign match_rs[0][i] = ((i < 4) & dispatch_pkt_cast_i.queue_v & ~dispatch_pkt_cast_i.rs1_fp_v & comp_stage_r[i].ird_w_v & (dispatch_pkt_cast_i.instr.t.fmatype.rs1_addr == comp_stage_r[i].rd_addr))
+                              || ((i > 0) & dispatch_pkt_cast_i.queue_v & dispatch_pkt_cast_i.rs1_fp_v & comp_stage_r[i].frd_w_v & (dispatch_pkt_cast_i.instr.t.fmatype.rs1_addr == comp_stage_r[i].rd_addr));
+      assign match_rs[1][i] = ((i < 4) & dispatch_pkt_cast_i.queue_v & ~dispatch_pkt_cast_i.rs2_fp_v & comp_stage_r[i].ird_w_v & (dispatch_pkt_cast_i.instr.t.fmatype.rs2_addr == comp_stage_r[i].rd_addr))
+                              || ((i > 0) & dispatch_pkt_cast_i.queue_v & dispatch_pkt_cast_i.rs2_fp_v & comp_stage_r[i].frd_w_v & (dispatch_pkt_cast_i.instr.t.fmatype.rs2_addr == comp_stage_r[i].rd_addr));
+      assign match_rs[2][i] = ((i > 0) & dispatch_pkt_cast_i.queue_v & dispatch_pkt_cast_i.rs3_fp_v & comp_stage_r[i].frd_w_v & (dispatch_pkt_cast_i.instr.t.fmatype.rs3_addr == comp_stage_r[i].rd_addr));
 
       assign forward_data[i] = comp_stage_n[i+1].rd_data;
     end
@@ -438,10 +438,6 @@ module bp_be_calculator_top
       // Inject D$ miss so we don't accidentally write back the data
       comp_stage_n[2].ird_w_v    &= ~pipe_mem_dcache_miss_lo;
       comp_stage_n[2].frd_w_v    &= ~pipe_mem_dcache_miss_lo;
-
-      // This is after the writeback, so we suppress to eliminate some of the unnecessary
-      //   bypass logic
-      comp_stage_n[4].ird_w_v     = '0;
     end
 
   bsg_dff
