@@ -227,10 +227,15 @@ module bp_tile
     end
 
   // LCE to CCE request
-  localparam pr_len_width_lp = 8;
-  logic [pr_len_width_lp-1:0] cce_lce_req_pr_len;
+  localparam cache_fill_width_lp = `BSG_MIN(icache_fill_width_p
+                                            , `BSG_MIN(dcache_fill_width_p
+                                                       , num_cacc_p ? acache_fill_width_p
+                                                                    : dcache_fill_width_p)
+                                            );
+  localparam bedrock_len_width_lp = `BSG_SAFE_CLOG2(`BSG_CDIV((1<<e_bedrock_msg_size_128)*8,cache_fill_width_lp));
+  logic [bedrock_len_width_lp-1:0] cce_lce_req_pr_len;
   bp_bedrock_size_to_len
-   #(.len_width_p(pr_len_width_lp)
+   #(.len_width_p(bedrock_len_width_lp)
      ,.beat_width_p(dword_width_gp)
      )
    cce_lce_req_size_to_len
@@ -245,7 +250,7 @@ module bp_tile
      ,.cid_width_p(coh_noc_cid_width_p)
      ,.pr_hdr_width_p(lce_req_header_width_lp)
      ,.pr_data_width_p(dword_width_gp)
-     ,.pr_len_width_p(pr_len_width_lp)
+     ,.pr_len_width_p(bedrock_len_width_lp)
      )
    cce_lce_req_wh_to_burst
    (.clk_i(clk_i)
@@ -304,9 +309,9 @@ module bp_tile
     );
 
   // LCE to CCE response
-  logic [pr_len_width_lp-1:0] cce_lce_resp_pr_len;
+  logic [bedrock_len_width_lp-1:0] cce_lce_resp_pr_len;
   bp_bedrock_size_to_len
-   #(.len_width_p(pr_len_width_lp)
+   #(.len_width_p(bedrock_len_width_lp)
      ,.beat_width_p(dword_width_gp)
      )
    cce_lce_resp_size_to_len
@@ -321,7 +326,7 @@ module bp_tile
      ,.cid_width_p(coh_noc_cid_width_p)
      ,.pr_hdr_width_p(lce_resp_header_width_lp)
      ,.pr_data_width_p(dword_width_gp)
-     ,.pr_len_width_p(pr_len_width_lp)
+     ,.pr_len_width_p(bedrock_len_width_lp)
      )
    cce_lce_resp_wh_to_burst
    (.clk_i(clk_i)
