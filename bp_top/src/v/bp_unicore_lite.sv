@@ -434,10 +434,10 @@ module bp_unicore_lite
      ,.msg_last_o(proc_resp_last_li)
      );
 
-  logic [dword_width_gp-1:0] cfg_data_lo, cfg_data_li;
+  logic [uce_fill_width_p-1:0] cfg_data_lo, cfg_data_li;
   bp_me_cfg_slice
    #(.bp_params_p(bp_params_p)
-     ,.data_width_p(dword_width_gp)
+     ,.data_width_p(uce_fill_width_p)
      )
    cfgs
     (.clk_i(clk_i)
@@ -469,10 +469,10 @@ module bp_unicore_lite
   assign cfg_data_li = dev_cmd_data_li[0];
   assign dev_resp_data_lo[0] = cfg_data_lo;
 
-  logic [dword_width_gp-1:0] clint_data_lo, clint_data_li;
+  logic [uce_fill_width_p-1:0] clint_data_lo, clint_data_li;
   bp_me_clint_slice
    #(.bp_params_p(bp_params_p)
-     ,.data_width_p(dword_width_gp)
+     ,.data_width_p(uce_fill_width_p)
      )
    clint
     (.clk_i(clk_i)
@@ -498,10 +498,10 @@ module bp_unicore_lite
   assign clint_data_li = dev_cmd_data_li[1];
   assign dev_resp_data_lo[1] = clint_data_lo;
 
-  logic [dword_width_gp-1:0] loopback_data_lo, loopback_data_li;
+  logic [uce_fill_width_p-1:0] loopback_data_lo, loopback_data_li;
   bp_me_loopback
    #(.bp_params_p(bp_params_p)
-     ,.data_width_p(dword_width_gp)
+     ,.data_width_p(uce_fill_width_p)
      )
    loopback
     (.clk_i(clk_i)

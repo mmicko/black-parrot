@@ -608,7 +608,7 @@ module bp_cce_msg
               mem_resp_yumi_o = mem_resp_v_i & lce_cmd_header_ready_and_i;
 
               // command header
-              lce_cmd_header_cast_o.msg_type = e_bedrock_cmd_uc_st_done;
+              lce_cmd_header_cast_o.msg_type = e_bedrock_cmd_uc_done;
               lce_cmd_header_cast_o.addr = mem_resp_base_header_li.addr;
               // leave size as '0 equivalent, no data in this message
 

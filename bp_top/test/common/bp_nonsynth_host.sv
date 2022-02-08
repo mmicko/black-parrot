@@ -29,13 +29,13 @@ module bp_nonsynth_host
    , input                                          reset_i
 
    , input [mem_header_width_lp-1:0]                mem_cmd_header_i
-   , input [dword_width_gp-1:0]                     mem_cmd_data_i
+   , input [io_data_width_p-1:0]                    mem_cmd_data_i
    , input                                          mem_cmd_v_i
    , output logic                                   mem_cmd_ready_and_o
    , input                                          mem_cmd_last_i
 
    , output logic [mem_header_width_lp-1:0]         mem_resp_header_o
-   , output logic [dword_width_gp-1:0]              mem_resp_data_o
+   , output logic [io_data_width_p-1:0]             mem_resp_data_o
    , output logic                                   mem_resp_v_o
    , input                                          mem_resp_ready_and_i
    , output logic                                   mem_resp_last_o
@@ -54,6 +54,9 @@ module bp_nonsynth_host
    , output logic                                   dev_trace_en_o
    , output logic [num_core_p-1:0]                  finish_o
    );
+
+  if (io_data_width_p < dword_width_gp)
+    $error("IO data width must be at least dword_width_gp");
 
   import "DPI-C" context function void start();
   import "DPI-C" context function int scan();
@@ -97,6 +100,7 @@ module bp_nonsynth_host
   logic [bedrock_reg_els_lp-1:0][dword_width_gp-1:0] data_li;
   bp_me_bedrock_register
    #(.bp_params_p(bp_params_p)
+     ,.data_width_p(io_data_width_p)
      ,.els_p(bedrock_reg_els_lp)
      ,.reg_addr_width_p(dev_addr_width_gp)
      ,.base_addr_p({paramrom_match_addr_gp, bootrom_match_addr_gp, finish_match_addr_gp, getchar_match_addr_gp, putchar_match_addr_gp, putch_core_match_addr_gp})
