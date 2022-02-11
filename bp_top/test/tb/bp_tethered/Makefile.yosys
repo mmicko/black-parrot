@@ -1,0 +1,10 @@
+$(BUILD_DIR)/flist.vcs:
+	grep -v -e "^\#" $(SYN_PATH)/flist.vcs       > $@
+	echo wrapper.sv                             >> $@
+	sed -i "s\$BASEJUMP_STL_DIR/bsg_mem/bsg_mem_1rw_sync_mask_write_bit_synth.v\$BASEJUMP_STL_DIR/hard/ultrascale_plus/bsg_mem/bsg_mem_1rw_sync_mask_write_bit.v\g" $@
+   
+
+$(BUILD_DIR)/wrapper.sv:
+	sed "s/BP_CFG_FLOWVAR/$(CFG)/g" $(TB_PATH)/$(TB)/$(@F) > $@
+
+SYNTH_COLLATERAL = $(addprefix $(BUILD_DIR)/, flist.vcs wrapper.sv)
